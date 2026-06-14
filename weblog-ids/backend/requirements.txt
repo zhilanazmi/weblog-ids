@@ -14,5 +14,7 @@ pandas==2.2.2
 # Evaluasi metrik (accuracy, precision, recall, f1)
 scikit-learn==1.5.0
 
+# Database MySQL (driver murni Python, tanpa dependency C)
+PyMySQL==1.4.6
+
 # WebSocket support untuk uvicorn[standard] sudah termasuk (websockets)
-# SQLite sudah bawaan Python (modul sqlite3), tidak perlu paket tambahan
