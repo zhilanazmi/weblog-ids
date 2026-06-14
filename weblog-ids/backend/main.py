@@ -1,13 +1,13 @@
 """
 main.py - Entry point FastAPI WebLog-IDS.
 
-Pada tahap ini fokusnya lapisan database + integrasi pipeline. API dashboard,
-WebSocket, dan frontend belum dikerjakan (menyusul di tahap berikutnya).
-
 Saat startup:
 1. init_db()  -> pastikan database & tabel MySQL tersedia.
 2. Jalankan log watcher di background thread; tiap baris log baru diproses
    pipeline (parse -> deteksi -> simpan ke MySQL).
+
+API yang aktif tahap ini: detections & dashboard summary (REST). WebSocket,
+export CSV, evaluasi, dan frontend menyusul di tahap berikutnya.
 """
 
 import os
@@ -15,6 +15,7 @@ import sys
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 if _BACKEND_DIR not in sys.path:
@@ -24,6 +25,9 @@ import config
 import database
 from detection_pipeline import DetectionPipeline
 from services.log_watcher import LogWatcher
+from app_state import app_state
+from routes.detection_routes import router as detection_router
+from routes.dashboard_routes import router as dashboard_router
 
 # Referensi global agar watcher bisa dihentikan saat shutdown.
 _watcher: LogWatcher = None
@@ -51,6 +55,9 @@ async def lifespan(app: FastAPI):
 
     _watcher = LogWatcher(on_line=handle_line)
     _watcher.start_background()
+    # Simpan referensi watcher ke app_state agar endpoint dashboard bisa
+    # melaporkan status watcher tanpa circular import ke main.py.
+    app_state.watcher = _watcher
     print(f"[main] Watcher berjalan memantau: {config.LOG_FILE_PATH}")
 
     yield
@@ -62,6 +69,20 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="WebLog-IDS", version="0.1.0", lifespan=lifespan)
+
+# CORS: izinkan origin frontend React (Vite default 5173, CRA default 3000)
+# agar dashboard di tahap berikutnya bisa memanggil API dari browser.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Daftarkan router REST (prefix /api sudah didefinisikan di tiap router).
+app.include_router(detection_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/api/health")
