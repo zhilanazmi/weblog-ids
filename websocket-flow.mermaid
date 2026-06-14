@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant Nginx as Nginx / DVWA<br/>(dvwa_access.log)
+    participant Watcher as Log Watcher<br/>(tail -f)
+    participant Engine as Rule Engine<br/>+ Classifier
+    participant DB as SQLite
+    participant WS as WebSocket Server<br/>(FastAPI)
+    participant Dash as Dashboard<br/>(React)
+
+    Note over Dash,WS: 1. Saat dashboard dibuka, koneksi WebSocket<br/>langsung dibuka & TETAP TERBUKA
+    Dash->>WS: connect (ws://server/ws/alerts)
+    WS-->>Dash: connected (saluran siap)
+
+    Note over Nginx,Engine: 2. Serangan terjadi & tercatat di log
+    Nginx->>Watcher: baris log baru masuk
+    Watcher->>Engine: parse + preprocess (URL decode, normalisasi)
+    Engine->>Engine: rule matching regex<br/>(XSS / SQLi / Multiple?)
+
+    alt Terdeteksi serangan
+        Engine->>DB: simpan hasil deteksi
+        Engine->>WS: kirim data alert ke server
+        Note over WS,Dash: 3. Server PUSH alert lewat saluran<br/>yang sudah terbuka (tanpa diminta)
+        WS-->>Dash: push alert realtime
+        Dash->>Dash: tampilkan alert DETIK ITU JUGA<br/>(tanpa refresh)
+    else Normal
+        Engine->>DB: simpan sebagai Normal
+        Note over Engine,Dash: tidak ada alert dikirim
+    end

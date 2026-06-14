@@ -12,6 +12,7 @@ export CSV, evaluasi, dan frontend menyusul di tahap berikutnya.
 
 import os
 import sys
+import asyncio
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -28,6 +29,7 @@ from services.log_watcher import LogWatcher
 from app_state import app_state
 from routes.detection_routes import router as detection_router
 from routes.dashboard_routes import router as dashboard_router
+from routes.websocket_routes import router as websocket_router
 
 # Referensi global agar watcher bisa dihentikan saat shutdown.
 _watcher: LogWatcher = None
@@ -42,7 +44,12 @@ async def lifespan(app: FastAPI):
     # 1. Siapkan database (idempotent).
     database.init_db()
 
-    # 2. Siapkan pipeline (memuat rule sekali).
+    # 2. Simpan referensi event loop utama FastAPI. Watcher berjalan di thread
+    #    sinkron, jadi ia butuh referensi loop ini untuk menjadwalkan broadcast
+    #    WebSocket secara thread-safe (lihat detection_pipeline).
+    app_state.loop = asyncio.get_running_loop()
+
+    # 3. Siapkan pipeline (memuat rule sekali).
     _pipeline = DetectionPipeline()
 
     # 3. Jalankan watcher di background; tiap baris diteruskan ke pipeline.
@@ -83,6 +90,8 @@ app.add_middleware(
 # Daftarkan router REST (prefix /api sudah didefinisikan di tiap router).
 app.include_router(detection_router)
 app.include_router(dashboard_router)
+# Router WebSocket alert realtime (/ws/alerts).
+app.include_router(websocket_router)
 
 
 @app.get("/api/health")

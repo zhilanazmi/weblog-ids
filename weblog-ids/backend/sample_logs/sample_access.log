@@ -4,3 +4,4 @@
 45.4.4.4 - - [14/Jun/2026:12:00:03 +0800] "GET /?a=%3Cscript%3Ealert(1)%3C%2Fscript%3E&b=union%20select HTTP/1.1" 200 90 "-" "sqlmap/1.7"
 45.5.5.5 - - [14/Jun/2026:12:00:04 +0800] "GET /login.php HTTP/1.1" 200 644 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 baris-ngawur-tidak-sesuai-format-harus-di-skip
+10.0.0.1 - - [14/Jun/2026:13:00:00 +0800] "GET /dvwa/vulnerabilities/xss_r/?name=%3Cscript%3Ealert(1)%3C%2Fscriptss%3E HTTP/1.1" 200 100 "-" "ua"

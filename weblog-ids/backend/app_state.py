@@ -15,6 +15,10 @@ class AppState:
     def __init__(self):
         # Referensi ke LogWatcher aktif. Diisi oleh main.py saat startup.
         self.watcher = None
+        # Referensi ke event loop utama FastAPI. Diisi saat startup agar thread
+        # watcher (sinkron) bisa menjadwalkan coroutine broadcast WebSocket ke
+        # loop ini secara thread-safe (asyncio.run_coroutine_threadsafe).
+        self.loop = None
 
     def is_watcher_running(self) -> bool:
         """True bila watcher ada dan thread-nya masih hidup."""

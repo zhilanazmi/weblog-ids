@@ -1,0 +1,4 @@
+1. "kenapa pakai WebSocket?"
+-> Karena deteksi intrusi harus ditampilkan secepat mungkin saat serangan terjadi. HTTP biasa tidak memungkinkan server mengirim notifikasi sendiri ke dashboard, sehingga digunakan WebSocket agar server dapat mendorong alert ke frontend secara langsung begitu rule engine mendeteksi serangan XSS atau SQLi.
+
+

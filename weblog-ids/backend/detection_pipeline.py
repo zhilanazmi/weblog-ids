@@ -15,12 +15,15 @@ from typing import Optional, Dict, Any, List
 
 import os
 import sys
+import asyncio
 
 _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
 import database
+from app_state import app_state
+from services.alert_service import manager
 from services.nginx_parser import parse_log_line
 from services.preprocessor import build_payload
 from services.rule_engine import load_rules, match_rules
@@ -29,6 +32,9 @@ from services.classifier import (
     determine_severity,
     generate_recommendation,
 )
+
+# Label yang dianggap serangan dan memicu alert WebSocket.
+_ATTACK_LABELS = ("XSS", "SQLi", "Multiple")
 
 
 class DetectionPipeline:
@@ -76,6 +82,21 @@ class DetectionPipeline:
         log_id = database.save_access_log(parsed)
         detection_id = database.save_detection_result(log_id, hasil_deteksi)
 
+        # 9. Jika ini serangan (bukan Normal), kirim alert realtime ke WebSocket.
+        if label in _ATTACK_LABELS:
+            alert_payload = {
+                "timestamp": parsed.get("timestamp"),
+                "ip": parsed.get("ip"),
+                "method": parsed.get("method"),
+                "request_uri": parsed.get("request_uri"),
+                "decoded_payload": payload["decoded_payload"],
+                "label": label,
+                "severity": severity,
+                "matched_rules": [m["id"] for m in matched],
+                "recommendation": recommendation,
+            }
+            self._broadcast_alert(alert_payload)
+
         return {
             "log_id": log_id,
             "detection_id": detection_id,
@@ -85,6 +106,32 @@ class DetectionPipeline:
             "severity": severity,
             "matched_rules": [m["id"] for m in matched],
         }
+
+    def _broadcast_alert(self, alert_payload: Dict[str, Any]) -> None:
+        """
+        Kirim alert ke WebSocket clients dengan aman dari konteks thread.
+
+        TITIK TEKNIS PENTING (threading vs asyncio):
+        process_line() dipanggil dari thread log watcher yang sinkron, sedangkan
+        manager.broadcast() adalah coroutine yang HARUS berjalan di event loop
+        FastAPI. Memanggil coroutine langsung dari thread lain tidak akan jalan.
+
+        Solusinya: pakai asyncio.run_coroutine_threadsafe() untuk menjadwalkan
+        coroutine broadcast ke loop utama (referensinya disimpan di
+        app_state.loop saat startup). Ini cara aman menyeberangkan pekerjaan
+        async dari thread sinkron ke event loop.
+        """
+        loop = app_state.loop
+        if loop is None:
+            # Loop belum siap (mis. pipeline dipakai di luar FastAPI) -> lewati.
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(
+                manager.broadcast(alert_payload), loop
+            )
+        except Exception as e:
+            # Kegagalan broadcast tidak boleh menjatuhkan pemrosesan log.
+            print(f"[Pipeline] Gagal broadcast alert: {e}")
 
 
 # ---------------------------------------------------------------------------
