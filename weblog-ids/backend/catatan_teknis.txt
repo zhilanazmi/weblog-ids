@@ -1,0 +1,1 @@
+1. Untuk demo sidang, minta agent memberi kamu skrip client WebSocket kecil. Lebih meyakinkan kalau kamu bisa menunjukkan jendela terminal yang mencetak alert masuk secara langsung saat kamu mengirim request serangan ke DVWA.
