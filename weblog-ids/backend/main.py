@@ -30,6 +30,7 @@ from app_state import app_state
 from routes.detection_routes import router as detection_router
 from routes.dashboard_routes import router as dashboard_router
 from routes.websocket_routes import router as websocket_router
+from routes.report_routes import router as report_router
 
 # Referensi global agar watcher bisa dihentikan saat shutdown.
 _watcher: LogWatcher = None
@@ -92,6 +93,8 @@ app.include_router(detection_router)
 app.include_router(dashboard_router)
 # Router WebSocket alert realtime (/ws/alerts).
 app.include_router(websocket_router)
+# Router export CSV (/api/reports/export-csv).
+app.include_router(report_router)
 
 
 @app.get("/api/health")

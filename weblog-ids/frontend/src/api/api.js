@@ -44,3 +44,12 @@ export const fetchDetections = ({ limit = 20, offset = 0, label = "" } = {}) => 
 };
 
 export const fetchHealth = () => getJSON("/api/health");
+
+// URL export CSV (dengan filter label opsional). Dipakai untuk memicu unduhan
+// langsung di browser, jadi kita kembalikan URL-nya saja, bukan fetch JSON.
+export const exportCsvUrl = (label = "") => {
+  const params = new URLSearchParams();
+  if (label) params.append("label", label);
+  const qs = params.toString();
+  return `${BASE_URL}/api/reports/export-csv${qs ? `?${qs}` : ""}`;
+};

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchDetections } from "../api/api.js";
+import { fetchDetections, exportCsvUrl } from "../api/api.js";
 
 // DetectionResults.jsx - Tabel semua hasil deteksi + filter label + paginasi.
 
@@ -57,6 +57,14 @@ export default function DetectionResults() {
     setOffset(0);
   };
 
+  // Export CSV: arahkan browser ke URL endpoint export dengan filter label
+  // yang sedang aktif. Karena backend mengirim header Content-Disposition:
+  // attachment, browser otomatis mengunduh file tanpa pindah halaman.
+  const onExportCsv = () => {
+    const url = exportCsvUrl(label === "Semua" ? "" : label);
+    window.open(url, "_blank");
+  };
+
   const page = Math.floor(offset / PAGE_SIZE) + 1;
 
   return (
@@ -74,6 +82,9 @@ export default function DetectionResults() {
             ))}
           </select>
         </label>
+
+        {/* Tombol export: mengirim filter label aktif ke endpoint export-csv. */}
+        <button onClick={onExportCsv}>Export CSV</button>
 
         {/* Paginasi sederhana berbasis offset. Tombol Prev nonaktif di halaman 1. */}
         <button
