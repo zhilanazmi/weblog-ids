@@ -1,0 +1,10 @@
+Tahap 1: Struktur project + requirements.txt
+Tahap 2: Log watcher realtime (baca /var/log/nginx/dvwa_access.log seperti tail -f)
+Tahap 3: Parser Nginx combined log
+Tahap 4: Preprocessor (URL decode + normalisasi)
+Tahap 5: Rule engine (baca xss_rules.json & sqli_rules.json) + classifier
+Tahap 6: Database SQLite (simpan access_logs & detection_results)
+Tahap 7: API FastAPI (detections, dashboard summary)
+Tahap 8: WebSocket alert realtime
+Tahap 9: Frontend React (dashboard, detection results, realtime alerts)
+Tahap 10: Export CSV + README
