@@ -1,0 +1,42 @@
+[
+  {
+    "id": "SQLI-001",
+    "name": "SQLi Union Select",
+    "attack_type": "SQLi",
+    "pattern": "union\\s+select",
+    "severity": "high",
+    "description": "Mendeteksi pola UNION SELECT"
+  },
+  {
+    "id": "SQLI-002",
+    "name": "SQLi Boolean Based",
+    "attack_type": "SQLi",
+    "pattern": "('|\\\")?\\s*(or|and)\\s+('|\\\")?\\d+('|\\\")?\\s*=\\s*('|\\\")?\\d+",
+    "severity": "high",
+    "description": "Mendeteksi pola boolean-based SQL injection"
+  },
+  {
+    "id": "SQLI-003",
+    "name": "SQLi Comment Pattern",
+    "attack_type": "SQLi",
+    "pattern": "(--|#|/\\*|\\*/)",
+    "severity": "medium",
+    "description": "Mendeteksi komentar SQL yang umum digunakan dalam SQLi"
+  },
+  {
+    "id": "SQLI-004",
+    "name": "SQLi Time Based",
+    "attack_type": "SQLi",
+    "pattern": "(sleep\\s*\\(|benchmark\\s*\\()",
+    "severity": "high",
+    "description": "Mendeteksi time-based SQL injection"
+  },
+  {
+    "id": "SQLI-005",
+    "name": "SQLi Information Schema",
+    "attack_type": "SQLi",
+    "pattern": "information_schema",
+    "severity": "high",
+    "description": "Mendeteksi akses ke information_schema"
+  }
+]

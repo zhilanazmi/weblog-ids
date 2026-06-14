@@ -1,0 +1,34 @@
+[
+  {
+    "id": "XSS-001",
+    "name": "XSS Script Tag",
+    "attack_type": "XSS",
+    "pattern": "<\\s*script[^>]*>.*?<\\s*/\\s*script\\s*>",
+    "severity": "high",
+    "description": "Mendeteksi penggunaan tag script pada request"
+  },
+  {
+    "id": "XSS-002",
+    "name": "XSS Event Handler",
+    "attack_type": "XSS",
+    "pattern": "on(error|load|click|mouseover|focus)\\s*=",
+    "severity": "medium",
+    "description": "Mendeteksi event handler JavaScript pada parameter"
+  },
+  {
+    "id": "XSS-003",
+    "name": "XSS JavaScript URI",
+    "attack_type": "XSS",
+    "pattern": "javascript\\s*:",
+    "severity": "high",
+    "description": "Mendeteksi penggunaan skema javascript:"
+  },
+  {
+    "id": "XSS-004",
+    "name": "XSS Alert Function",
+    "attack_type": "XSS",
+    "pattern": "(alert|prompt|confirm)\\s*\\(",
+    "severity": "medium",
+    "description": "Mendeteksi fungsi JavaScript umum pada payload XSS"
+  }
+]
