@@ -27,9 +27,9 @@
     "id": "SQLI-004",
     "name": "SQLi Time Based",
     "attack_type": "SQLi",
-    "pattern": "(sleep\\s*\\(|benchmark\\s*\\()",
+    "pattern": "(sleep\\s*\\(|benchmark\\s*\\(|pg_sleep\\s*\\(|waitfor\\s+delay\\s+|waitfor\\s+time\\s+)",
     "severity": "high",
-    "description": "Mendeteksi time-based SQL injection"
+    "description": "Mendeteksi time-based SQL injection: sleep, benchmark, pg_sleep, waitfor delay"
   },
   {
     "id": "SQLI-005",
@@ -38,5 +38,45 @@
     "pattern": "information_schema",
     "severity": "high",
     "description": "Mendeteksi akses ke information_schema"
+  },
+  {
+    "id": "SQLI-006",
+    "name": "SQLi DB Version Enumeration",
+    "attack_type": "SQLi",
+    "pattern": "(@@version|@@servername|@@datadir|@@spid|version\\s*\\(\\s*\\)|v\\$version)",
+    "severity": "high",
+    "description": "Mendeteksi enumerasi versi/konfigurasi database: @@version, version(), v$version"
+  },
+  {
+    "id": "SQLI-007",
+    "name": "SQLi Oracle Keyword",
+    "attack_type": "SQLi",
+    "pattern": "(rownum|dba_users|all_tables|user_tables|v\\$session|banner\\s+from)",
+    "severity": "high",
+    "description": "Mendeteksi keyword Oracle yang sering dipakai SQLi: rownum, dba_users, banner from"
+  },
+  {
+    "id": "SQLI-008",
+    "name": "SQLi Boolean Parenthesized",
+    "attack_type": "SQLi",
+    "pattern": "\\b(or|and)\\s*\\(\\s*['\"]?\\d+['\"]?\\s*=\\s*['\"]?\\d+",
+    "severity": "high",
+    "description": "Mendeteksi boolean-based SQLi dengan tanda kurung: or ('1'='1)"
+  },
+  {
+    "id": "SQLI-009",
+    "name": "SQLi SQLMap Marker",
+    "attack_type": "SQLi",
+    "pattern": "__[A-Z0-9]+__",
+    "severity": "medium",
+    "description": "Mendeteksi marker template SQLMap seperti __TIME__, __FUNC__, __RANDSTR__"
+  },
+  {
+    "id": "SQLI-010",
+    "name": "SQLi Select From Statement",
+    "attack_type": "SQLi",
+    "pattern": "\\bselect\\b.{0,60}?\\bfrom\\b",
+    "severity": "medium",
+    "description": "Mendeteksi statement SELECT...FROM pada payload (indikasi SQLi)"
   }
 ]
