@@ -1,0 +1,37 @@
+# ----------------------------------------------------------------------------
+# .gitignore - WebLog-IDS
+# ----------------------------------------------------------------------------
+
+# === Secrets / environment (JANGAN pernah commit) ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# === Python (backend) ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+ENV/
+.python-version
+
+# === Node / Vite (frontend) ===
+node_modules/
+dist/
+.vite/
+*.local
+
+# === Logs & data runtime ===
+*.log
+logs/
+
+# === Editor / OS ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
