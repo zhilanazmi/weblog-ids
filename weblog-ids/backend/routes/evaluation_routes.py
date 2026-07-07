@@ -19,6 +19,7 @@ _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
+import database
 from evaluation.evaluator import CLASSES, run_evaluation, get_latest_evaluation_run
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"])
@@ -78,6 +79,35 @@ def _build_evaluation_csv(result: Dict[str, Any]) -> str:
 def run_evaluation_endpoint() -> Dict[str, Any]:
     """Jalankan evaluasi dari semua record yang sudah memiliki actual_label."""
     return run_evaluation()
+
+
+@router.post("/clear")
+def clear_evaluation() -> Dict[str, Any]:
+    """
+    Reset state evaluasi tanpa menghapus data deteksi/log.
+
+    Yang dihapus hanya ground truth manual (`actual_label`, `labeled_at`,
+    `labeled_by`) dan histori snapshot `evaluation_runs`, supaya peneliti bisa
+    memulai ulang sesi evaluasi dari awal secara eksplisit.
+    """
+    conn = database.get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE detection_results
+                SET actual_label = NULL, labeled_at = NULL, labeled_by = NULL
+                WHERE actual_label IS NOT NULL
+                   OR labeled_at IS NOT NULL
+                   OR labeled_by IS NOT NULL
+                """
+            )
+            reset_labels = cur.rowcount
+            cur.execute("DELETE FROM evaluation_runs")
+            deleted_runs = cur.rowcount
+    finally:
+        conn.close()
+    return {"reset_labels": reset_labels, "deleted_runs": deleted_runs}
 
 
 @router.get("/results")

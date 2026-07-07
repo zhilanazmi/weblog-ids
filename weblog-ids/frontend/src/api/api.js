@@ -63,6 +63,7 @@ export const markUnlabeledAsNormal = () =>
 
 // ---------- Endpoint evaluasi ----------
 export const runEvaluation = () => postJSON("/api/evaluation/run");
+export const clearEvaluation = () => postJSON("/api/evaluation/clear");
 export const fetchEvaluationResults = () => getJSON("/api/evaluation/results");
 
 export const exportEvaluationCsvUrl = () =>

@@ -4,6 +4,7 @@ import {
   setActualLabel,
   markUnlabeledAsNormal,
   runEvaluation,
+  clearEvaluation,
   fetchEvaluationResults,
   exportEvaluationCsvUrl,
 } from "../api/api.js";
@@ -130,6 +131,27 @@ export default function Evaluation() {
     window.open(exportEvaluationCsvUrl(), "_blank");
   };
 
+  const onClearEvaluation = async () => {
+    const ok = window.confirm(
+      "Clear Evaluasi akan menghapus semua Label Aktual dan histori hasil evaluasi, tetapi data deteksi/log tetap aman. Lanjutkan?"
+    );
+    if (!ok) return;
+    setEvalLoading(true);
+    setLoading(true);
+    try {
+      await clearEvaluation();
+      setEvalResult(null);
+      setOffset(0);
+      await loadDetections();
+      setError("");
+    } catch (e) {
+      setError("Gagal clear evaluasi. (" + e.message + ")");
+    } finally {
+      setEvalLoading(false);
+      setLoading(false);
+    }
+  };
+
   const page = Math.floor(offset / PAGE_SIZE) + 1;
   const matrix = evalResult?.confusion_matrix || {};
   const ovr = evalResult?.ovr_metrics || {};
@@ -228,6 +250,9 @@ export default function Evaluation() {
         <div className="controls">
           <button onClick={onRunEvaluation} disabled={evalLoading}>
             {evalLoading ? "Menghitung..." : "Run Evaluation"}
+          </button>
+          <button onClick={onClearEvaluation} disabled={evalLoading || loading}>
+            Clear Evaluasi
           </button>
           <button onClick={onExportEvaluation}>Export Hasil Evaluasi (CSV)</button>
           {evalResult?.run_id && <span className="label">Run ID: {evalResult.run_id}</span>}
