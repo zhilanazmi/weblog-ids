@@ -24,6 +24,18 @@ async function getJSON(path) {
   return res.json();
 }
 
+async function postJSON(path, body = undefined) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} saat mengirim ${path}`);
+  }
+  return res.json();
+}
+
 // ---------- Endpoint dashboard ----------
 export const fetchSummary = () => getJSON("/api/dashboard/summary");
 export const fetchAttackTypes = () => getJSON("/api/dashboard/attack-types");
@@ -42,6 +54,19 @@ export const fetchDetections = ({ limit = 20, offset = 0, label = "" } = {}) => 
   if (label) params.append("label", label);
   return getJSON(`/api/detections?${params.toString()}`);
 };
+
+export const setActualLabel = (id, actualLabel) =>
+  postJSON(`/api/detections/${id}/actual-label`, { actual_label: actualLabel });
+
+export const markUnlabeledAsNormal = () =>
+  postJSON("/api/detections/mark-unlabeled-as-normal");
+
+// ---------- Endpoint evaluasi ----------
+export const runEvaluation = () => postJSON("/api/evaluation/run");
+export const fetchEvaluationResults = () => getJSON("/api/evaluation/results");
+
+export const exportEvaluationCsvUrl = () =>
+  `${BASE_URL}/api/evaluation/export-csv`;
 
 export const fetchHealth = () => getJSON("/api/health");
 

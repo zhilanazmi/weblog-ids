@@ -46,6 +46,9 @@ CREATE TABLE IF NOT EXISTS detection_results (
     severity           VARCHAR(20),
     matched_rules      TEXT,
     recommendation     TEXT,
+    actual_label       VARCHAR(20) NULL DEFAULT NULL,
+    labeled_at         DATETIME NULL DEFAULT NULL,
+    labeled_by         VARCHAR(100) NULL DEFAULT NULL,
     created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (log_id) REFERENCES access_logs(id)
 );
@@ -80,4 +83,16 @@ CREATE TABLE IF NOT EXISTS evaluation_results (
     recall_score    DOUBLE,
     f1_score        DOUBLE,
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------------------------------------------------------------------
+-- Tabel evaluation_runs: snapshot hasil evaluasi OvR strict 4-kelas.
+-- json_result menyimpan confusion matrix, metrik per kelas, dan overall.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS evaluation_runs (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    run_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    accuracy    DOUBLE,
+    macro_f1    DOUBLE,
+    json_result LONGTEXT
 );

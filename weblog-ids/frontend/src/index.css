@@ -278,3 +278,48 @@ button:disabled {
   color: var(--muted);
   margin-right: 6px;
 }
+
+/* ---------- Evaluasi ---------- */
+.eval-section {
+  margin-bottom: 20px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.actual-label-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.label-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.eval-cards {
+  margin-top: 12px;
+}
+
+.confusion-table th,
+.confusion-table td {
+  text-align: center;
+}
+
+.confusion-table tbody th {
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.confusion-table td.cm-diagonal {
+  background: rgba(34, 197, 94, 0.18);
+  color: #bbf7d0;
+  font-weight: 700;
+}
+
+.confusion-table td.cm-off {
+  background: rgba(239, 68, 68, 0.08);
+}

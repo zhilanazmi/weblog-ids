@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS detection_results (
     severity           VARCHAR(20),
     matched_rules      TEXT,
     recommendation     TEXT,
+    actual_label       VARCHAR(20) NULL DEFAULT NULL,
+    labeled_at         DATETIME NULL DEFAULT NULL,
+    labeled_by         VARCHAR(100) NULL DEFAULT NULL,
     created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (log_id) REFERENCES access_logs(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -91,12 +94,29 @@ CREATE TABLE IF NOT EXISTS evaluation_results (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 """
 
+_CREATE_EVALUATION_RUNS = """
+CREATE TABLE IF NOT EXISTS evaluation_runs (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    run_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    accuracy    DOUBLE,
+    macro_f1    DOUBLE,
+    json_result LONGTEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+"""
+
 _ALL_TABLES = [
     _CREATE_ACCESS_LOGS,
     _CREATE_DETECTION_RESULTS,
     _CREATE_RULES,
     _CREATE_EVALUATION_RESULTS,
+    _CREATE_EVALUATION_RUNS,
 ]
+
+_DETECTION_RESULT_COLUMNS = {
+    "actual_label": "ALTER TABLE detection_results ADD COLUMN actual_label VARCHAR(20) NULL DEFAULT NULL",
+    "labeled_at": "ALTER TABLE detection_results ADD COLUMN labeled_at DATETIME NULL DEFAULT NULL",
+    "labeled_by": "ALTER TABLE detection_results ADD COLUMN labeled_by VARCHAR(100) NULL DEFAULT NULL",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -151,10 +171,31 @@ def init_db() -> None:
         with conn.cursor() as cur:
             for ddl in _ALL_TABLES:
                 cur.execute(ddl)
+            _ensure_detection_label_columns(cur)
     finally:
         conn.close()
 
     print(f"[Database] init_db selesai. Database '{config.DB_NAME}' siap.")
+
+
+def _ensure_detection_label_columns(cur) -> None:
+    """
+    Migrasi ringan untuk database lama: CREATE TABLE IF NOT EXISTS tidak
+    menambah kolom pada tabel yang sudah ada, jadi kolom labeling wajib dicek
+    lewat INFORMATION_SCHEMA lalu ditambah bila belum ada.
+    """
+    cur.execute(
+        """
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'detection_results'
+        """,
+        (config.DB_NAME,),
+    )
+    existing = {row["COLUMN_NAME"] for row in cur.fetchall()}
+    for column, ddl in _DETECTION_RESULT_COLUMNS.items():
+        if column not in existing:
+            cur.execute(ddl)
 
 
 # ---------------------------------------------------------------------------
