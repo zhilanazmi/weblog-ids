@@ -9,18 +9,26 @@ import Evaluation from "./pages/Evaluation.jsx";
 // menu halaman yang sedang dibuka.
 export default function App() {
   return (
-    <div>
+    <div className="app-shell">
       <nav className="navbar">
-        <span className="brand">WebLog-IDS</span>
-        <NavLink to="/" end>
-          Dashboard
-        </NavLink>
-        <NavLink to="/detections">Hasil Deteksi</NavLink>
-        <NavLink to="/evaluation">Evaluasi</NavLink>
-        <NavLink to="/alerts">Alert Realtime</NavLink>
+        <div className="brand-block">
+          <span className="brand-mark">WI</span>
+          <div>
+            <span className="brand">WebLog-IDS</span>
+            <span className="brand-subtitle">Intrusion Detection Dashboard</span>
+          </div>
+        </div>
+        <div className="nav-links">
+          <NavLink to="/" end>
+            Dashboard
+          </NavLink>
+          <NavLink to="/detections">Hasil Deteksi</NavLink>
+          <NavLink to="/evaluation">Evaluasi</NavLink>
+          <NavLink to="/alerts">Alert Realtime</NavLink>
+        </div>
       </nav>
 
-      <div className="container">
+      <main className="container">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/detections" element={<DetectionResults />} />
@@ -29,7 +37,7 @@ export default function App() {
           {/* Fallback: arahkan rute tak dikenal ke dashboard. */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
+      </main>
     </div>
   );
 }
