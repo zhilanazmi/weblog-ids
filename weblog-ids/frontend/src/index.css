@@ -296,9 +296,6 @@ td {
 }
 
 th {
-  position: sticky;
-  top: 74px;
-  z-index: 5;
   background: rgba(15, 23, 42, 0.96);
   color: var(--muted);
   font-size: 12px;
@@ -521,10 +518,6 @@ button:disabled {
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-.table-scroll table th {
-  top: 0;
-}
-
 .actual-label-cell {
   display: flex;
   flex-direction: column;
@@ -584,9 +577,6 @@ button:disabled {
     white-space: nowrap;
   }
 
-  th {
-    top: 132px;
-  }
 }
 
 @media (max-width: 560px) {
