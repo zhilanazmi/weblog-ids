@@ -5,9 +5,10 @@
 // cukup ubah di satu tempat ini.
 
 // BASE_URL bisa dioverride lewat environment variable Vite (VITE_API_BASE_URL),
-// default ke localhost:8000 sesuai backend.
-export const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+// default ke localhost:8000 sesuai backend. Jika env production terlanjur
+// diisi dengan akhiran /api, normalisasi di sini mencegah URL dobel /api/api.
+const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+export const BASE_URL = RAW_BASE_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
 
 // URL WebSocket alert. Turunkan dari BASE_URL: ganti skema http->ws / https->wss.
 export const WS_URL =
