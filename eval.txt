@@ -1,0 +1,13 @@
+Pada fitur Evaluasi, sistem membandingkan label prediksi dari classifier dengan label aktual yang diberikan peneliti secara manual. Karena classifier menghasilkan empat kelas, yaitu XSS, SQLi, Normal, dan Multiple, maka confusion matrix dibuat dalam bentuk 4×4. Setelah confusion matrix terbentuk, sistem menghitung TP, FP, TN, dan FN untuk masing-masing kelas menggunakan pendekatan One-vs-Rest secara strict.
+
+Strict berarti satu record hanya masuk ke satu sel confusion matrix. Misalnya jika aktualnya XSS tetapi sistem memprediksi Multiple, maka record tersebut masuk ke baris XSS kolom Multiple. Untuk kelas XSS, itu dihitung sebagai false negative, bukan true positive.
+
+- Confusion matrix 4×4:
+    baris = aktual
+    kolom = prediksi
+- Diagonal matrix = prediksi benar.
+- Off-diagonal = kesalahan klasifikasi.
+- Multiple adalah kelas sendiri, bukan bonus TP untuk XSS/SQLi.
+- TP/FP/TN/FN dihitung per kelas dengan One-vs-Rest.
+Hasil evaluasi disimpan ke evaluation_runs.
+Clear Evaluasi hanya menghapus label aktual dan histori evaluasi, bukan data deteksi.

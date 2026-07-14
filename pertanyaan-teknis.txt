@@ -1,4 +1,15 @@
 1. "kenapa pakai WebSocket?"
 -> Karena deteksi intrusi harus ditampilkan secepat mungkin saat serangan terjadi. HTTP biasa tidak memungkinkan server mengirim notifikasi sendiri ke dashboard, sehingga digunakan WebSocket agar server dapat mendorong alert ke frontend secara langsung begitu rule engine mendeteksi serangan XSS atau SQLi.
 
+2. “Kenapa perlu actual_label?”
+-> Karena label dari sistem hanyalah prediksi. Untuk menghitung performa, harus ada pembanding berupa ground truth. Pada penelitian ini ground truth diberikan manual oleh peneliti karena pengujian dilakukan secara terkendali pada DVWA.
+
+3. “Kenapa confusion matrix-nya 4×4?”
+-> Karena classifier memiliki 4 kemungkinan output: XSS, SQLi, Normal, dan Multiple. Maka evaluasi dilakukan terhadap keempat kelas tersebut.
+
+4. “Kenapa Multiple tidak dihitung sebagai benar untuk XSS?”
+-> Karena skema evaluasi yang digunakan adalah strict multi-class. Jika aktualnya XSS, maka prediksi yang benar hanya XSS. Prediksi Multiple berarti sistem salah memilih kelas, sehingga dihitung sebagai FN untuk XSS.
+
+5. “Apa metrik paling penting?”
+-> Untuk IDS, recall penting karena berkaitan dengan seberapa banyak serangan yang berhasil tertangkap. FN yang tinggi berarti banyak serangan lolos tidak terdeteksi. Namun precision juga penting agar sistem tidak terlalu banyak false alarm.
 
