@@ -4,16 +4,20 @@ dashboard_routes.py - Endpoint REST untuk ringkasan & statistik dashboard.
 Statistik agregat dihitung di sisi database (COUNT + GROUP BY) sebisa mungkin,
 bukan di-loop di Python, agar efisien walau data besar. Semua query
 parameterized (%s).
+
+Filter opsional `days` (7/14/30) membatasi data ke N hari terakhir berdasarkan
+detection_results.created_at (DATETIME insert), bukan access_logs.timestamp
+(VARCHAR mentah Nginx).
 """
 
 import json
 from collections import Counter
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 
 import os
 import sys
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BACKEND_DIR not in sys.path:
@@ -24,23 +28,63 @@ from app_state import app_state
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
+# Rentang hari yang diizinkan di UI dashboard.
+_ALLOWED_DAYS = frozenset({7, 14, 30})
+
+
+def _parse_days(days: Optional[int]) -> Optional[int]:
+    """Validasi query days: None = semua waktu; selain itu harus 7/14/30."""
+    if days is None:
+        return None
+    if days not in _ALLOWED_DAYS:
+        raise HTTPException(
+            status_code=400,
+            detail="Parameter days harus 7, 14, atau 30 (atau dikosongkan).",
+        )
+    return days
+
+
+def _days_filter(days: Optional[int], column: str = "created_at") -> Tuple[str, List[Any]]:
+    """
+    Bangun fragmen SQL + param untuk filter N hari terakhir.
+    column: nama kolom DATETIME (biasanya detection_results.created_at).
+    """
+    if days is None:
+        return "", []
+    return f" AND {column} >= NOW() - INTERVAL %s DAY", [days]
+
 
 @router.get("/summary")
-def get_summary() -> Dict[str, Any]:
+def get_summary(
+    days: Optional[int] = Query(
+        None,
+        description="Filter N hari terakhir (7/14/30). Kosong = semua waktu.",
+    ),
+) -> Dict[str, Any]:
     """
     Ringkasan angka untuk kartu dashboard. Jumlah per label dihitung lewat
     satu query GROUP BY (bukan loop Python), lalu dipetakan ke field spesifik.
 
-    SQL:
+    SQL (tanpa filter):
         SELECT label, COUNT(*) AS jumlah
         FROM detection_results
         GROUP BY label
+
+    Dengan days=N:
+        ... WHERE created_at >= NOW() - INTERVAL N DAY ...
     """
-    sql = "SELECT label, COUNT(*) AS jumlah FROM detection_results GROUP BY label"
+    days = _parse_days(days)
+    where_extra, params = _days_filter(days, "created_at")
+    # WHERE 1=1 memudahkan append AND opsional tanpa cabang SQL terpisah.
+    sql = (
+        "SELECT label, COUNT(*) AS jumlah FROM detection_results"
+        f" WHERE 1=1{where_extra}"
+        " GROUP BY label"
+    )
     conn = database.get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, params)
             rows = cur.fetchall()
     finally:
         conn.close()
@@ -62,93 +106,99 @@ def get_summary() -> Dict[str, Any]:
         "total_sqli": total_sqli,
         "total_multiple": total_multiple,
         "total_alert": total_alert,
+        "days": days,
         "watcher_running": app_state.is_watcher_running(),
     }
 
 
 @router.get("/top-attacker-ip")
-def get_top_attacker_ip(limit: int = Query(10, ge=1, le=100)) -> Dict[str, Any]:
+def get_top_attacker_ip(
+    limit: int = Query(10, ge=1, le=100),
+    days: Optional[int] = Query(
+        None,
+        description="Filter N hari terakhir (7/14/30). Kosong = semua waktu.",
+    ),
+) -> Dict[str, Any]:
     """
     Top IP penyerang berdasarkan jumlah deteksi berlabel serangan (bukan Normal).
     Dihitung dengan GROUP BY ip + ORDER BY desc di database.
-
-    SQL:
+    """
+    days = _parse_days(days)
+    where_extra, day_params = _days_filter(days, "d.created_at")
+    sql = f"""
         SELECT a.ip, COUNT(*) AS jumlah
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
-        WHERE d.label <> %s
+        WHERE d.label <> %s{where_extra}
         GROUP BY a.ip
         ORDER BY jumlah DESC
         LIMIT %s
     """
-    sql = """
-        SELECT a.ip, COUNT(*) AS jumlah
-        FROM detection_results d
-        JOIN access_logs a ON a.id = d.log_id
-        WHERE d.label <> %s
-        GROUP BY a.ip
-        ORDER BY jumlah DESC
-        LIMIT %s
-    """
+    params: List[Any] = ["Normal", *day_params, limit]
     conn = database.get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, ("Normal", limit))
+            cur.execute(sql, params)
             rows = cur.fetchall()
     finally:
         conn.close()
-    return {"count": len(rows), "data": rows}
+    return {"count": len(rows), "data": rows, "days": days}
 
 
 @router.get("/attack-types")
-def get_attack_types() -> Dict[str, Any]:
+def get_attack_types(
+    days: Optional[int] = Query(
+        None,
+        description="Filter N hari terakhir (7/14/30). Kosong = semua waktu.",
+    ),
+) -> Dict[str, Any]:
     """
     Jumlah deteksi per label (untuk grafik pie/bar). Memakai GROUP BY label.
-
-    SQL:
-        SELECT label, COUNT(*) AS jumlah
-        FROM detection_results
-        GROUP BY label
-        ORDER BY jumlah DESC
     """
-    sql = """
+    days = _parse_days(days)
+    where_extra, params = _days_filter(days, "created_at")
+    sql = f"""
         SELECT label, COUNT(*) AS jumlah
         FROM detection_results
+        WHERE 1=1{where_extra}
         GROUP BY label
         ORDER BY jumlah DESC
     """
     conn = database.get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, params)
             rows = cur.fetchall()
     finally:
         conn.close()
-    return {"count": len(rows), "data": rows}
+    return {"count": len(rows), "data": rows, "days": days}
 
 
 @router.get("/rule-triggered")
-def get_rule_triggered(limit: int = Query(10, ge=1, le=100)) -> Dict[str, Any]:
+def get_rule_triggered(
+    limit: int = Query(10, ge=1, le=100),
+    days: Optional[int] = Query(
+        None,
+        description="Filter N hari terakhir (7/14/30). Kosong = semua waktu.",
+    ),
+) -> Dict[str, Any]:
     """
     Rule yang paling sering terpicu. Karena matched_rules disimpan sebagai TEXT
     berisi JSON (mis. ["XSS-001","SQLI-002"]), agregasi murni SQL sulit/tidak
     portabel. Maka kolom dibaca lalu frekuensi tiap rule_code dihitung di Python
     pakai Counter. Hanya kolom matched_rules yang diambil agar tetap ringan.
-
-    SQL:
-        SELECT matched_rules
-        FROM detection_results
-        WHERE matched_rules IS NOT NULL AND matched_rules <> '[]'
     """
-    sql = """
+    days = _parse_days(days)
+    where_extra, params = _days_filter(days, "created_at")
+    sql = f"""
         SELECT matched_rules
         FROM detection_results
-        WHERE matched_rules IS NOT NULL AND matched_rules <> '[]'
+        WHERE matched_rules IS NOT NULL AND matched_rules <> '[]'{where_extra}
     """
     conn = database.get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, params)
             rows = cur.fetchall()
     finally:
         conn.close()
@@ -169,4 +219,4 @@ def get_rule_triggered(limit: int = Query(10, ge=1, le=100)) -> Dict[str, Any]:
         {"rule_code": code, "jumlah": jumlah}
         for code, jumlah in counter.most_common(limit)
     ]
-    return {"count": len(data), "data": data}
+    return {"count": len(data), "data": data, "days": days}

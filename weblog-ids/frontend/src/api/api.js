@@ -37,13 +37,25 @@ async function postJSON(path, body = undefined) {
   return res.json();
 }
 
+// Bangun query string dashboard. days kosong/null = semua waktu (tanpa filter).
+function dashboardQs({ limit, days } = {}) {
+  const params = new URLSearchParams();
+  if (limit != null) params.set("limit", String(limit));
+  if (days != null && days !== "") params.set("days", String(days));
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 // ---------- Endpoint dashboard ----------
-export const fetchSummary = () => getJSON("/api/dashboard/summary");
-export const fetchAttackTypes = () => getJSON("/api/dashboard/attack-types");
-export const fetchTopIp = (limit = 10) =>
-  getJSON(`/api/dashboard/top-attacker-ip?limit=${limit}`);
-export const fetchRuleTriggered = (limit = 10) =>
-  getJSON(`/api/dashboard/rule-triggered?limit=${limit}`);
+// days opsional: 7 | 14 | 30 | null (semua waktu).
+export const fetchSummary = (days = null) =>
+  getJSON(`/api/dashboard/summary${dashboardQs({ days })}`);
+export const fetchAttackTypes = (days = null) =>
+  getJSON(`/api/dashboard/attack-types${dashboardQs({ days })}`);
+export const fetchTopIp = (limit = 10, days = null) =>
+  getJSON(`/api/dashboard/top-attacker-ip${dashboardQs({ limit, days })}`);
+export const fetchRuleTriggered = (limit = 10, days = null) =>
+  getJSON(`/api/dashboard/rule-triggered${dashboardQs({ limit, days })}`);
 
 // ---------- Endpoint deteksi ----------
 export const fetchLatestDetections = (n = 10) =>
