@@ -1,0 +1,48 @@
+# \*\*BAB I
+
+PENDAHULUAN\*\*
+
+## Latar Belakang
+
+Perkembangan ekosistem digital telah menjadikan aplikasi web sebagai infrastruktur kritis di berbagai industri, mulai dari _e-commerce_, keuangan, kesehatan, hingga pendidikan. Namun, semakin pentingnya peran aplikasi web berbanding lurus dengan meningkatnya risiko serangan siber yang tertarget pada sistem ini. Laporan keamanan terkini menunjukkan bahwa serangan terhadap aplikasi web terus meningkat signifikan, mengancam ketersediaan layanan dan menyebabkan pencurian data sensitif yang merugikan organisasi secara finansial maupun reputasional (Tadhani et al., 2024).
+
+Di antara berbagai varian serangan web, _SQL Injection (SQLi)_ dan _Cross-Site Scripting (XSS)_ termasuk ancaman paling dominan dan konsisten selama bertahun-tahun. _SQLi_ memungkinkan penyerang menyisipkan perintah _SQL_ berbahaya melalui input pengguna, sehingga dapat memanipulasi basis data, mencuri informasi sensitif, atau bahkan mengambil alih seluruh sistem database. _XSS_ sebaliknya memungkinkan penyerang menyuntikkan skrip berbahaya ke halaman web, mengakibatkan pencurian _cookie, session hijacking,_ atau eksekusi aksi tidak sah atas nama pengguna (Tadhani et al., 2024) (Neupane, 2025). Kedua serangan ini tetap menjadi kerentanan yang sering dieksploitasi karena kemudahan pelaksanaan dan dampak destruktif; OWASP secara konsisten menempatkan Injection dan XSS sebagai risiko kritis (di 2017 XSS kategori sendiri, dan di 2021 XSS tercakup dalam kategori Injection bersama SQL Injection), sehingga urgensi penanganannya tinggi(OWASP, 2017).
+
+Log akses web server menyimpan catatan lengkap setiap transaksi _HTTP_ yang terjadi, mencakup informasi seperti alamat IP sumber, timestamp, metode _HTTP_, _URI_ target, parameter permintaan, dan identitas pengguna. Data dalam access log secara inheren merekam jejak aktivitas berbahaya, termasuk payload _XSS_ dan _SQLi_ yang dikirimkan penyerang melalui permintaan _HTTP(Abdalla et al., 2025)_. Penelitian telah menunjukkan bahwa analisis sistematis terhadap pola dan fitur dalam log akses mampu mengidentifikasi serangan injeksi dengan akurasi tinggi, menjadikan access log sebagai sumber data yang berharga dan mudah diakses untuk deteksi intrusi (Abdalla et al., 2025).
+
+_Intrusion Detection System (IDS)_ berbasis _rule-based_ memanfaatkan kumpulan aturan predefinisi yang mencocokkan pola serangan yang telah diketahui. Pendekatan ini menawarkan keunggulan dibandingkan metode berbasis _machine learning_ yaitu transparan dan mudah dipahami oleh administrator sistem, dapat disesuaikan dengan kebutuhan spesifik organisasi, memberikan deteksi cepat untuk serangan terkenal tanpa memerlukan waktu pelatihan model, dan menghasilkan hasil yang dapat dijelaskan untuk audit keamanan (Mercu Buana, 2024). Penelitian implementasi _rule-based IDS_ pada lingkungan _web server_ menunjukkan bahwa pendekatan ini mampu mendeteksi _SQLi_ dan _XSS_ dengan baik, khususnya ketika aturan dirancang secara spesifik dan terstruktur berdasarkan pola payload aktual yang sering digunakan penyerang (Abdalla et al., 2025).
+
+Meskipun _rule-based IDS_ telah terbukti efektif untuk serangan konvensional, perkembangan teknik _encoding_ menunjukkan keterbatasan pendekatan dengan aturan statis. Banyak sistem _IDS_ web lebih berfokus pada _machine learning_ atau _deep learning_ tanpa memaksimalkan potensi log akses dan _rule-based_ sebagai mekanisme deteksi yang transparan dan mudah dikustomisasi. Penelitian tentang _rule-based IDS_ untuk web masih bersifat umum, belum secara spesifik mengoptimalkan aturan untuk _XSS_ dan _SQLi_ di tingkat log akses dengan pendekatan sistematis dan terukur. Integrasi antara analisis log akses berbasis fitur dengan pembuatan _ruleset_ yang responsif terhadap varian serangan masih terbatas dalam literatur, sehingga membuka peluang penelitian yang signifikan untuk mengisi celah tersebut(Neupane, 2025).
+
+Penelitian ini dirancang untuk mengembangkan mitigasi _intrusion detection_ yang mengintegrasikan analisis log akses web server secara sistematis dan pendekatan _rule-based_ yang terstruktur guna untuk mengatasi serangan _XSS_ dan _SQLi_. Dengan memanfaatkan informasi kaya yang tersimpan dalam _access log_ dan merancang aturan deteksi khusus untuk pola _XSS_ dan _SQLi_, sistem diharapkan mampu mengidentifikasi lalu lintas berbahaya dengan payload injeksi _XSS_ dan _SQLi_, memberikan peringatan dini yang presisi kepada administrator sistem untuk respons cepat, serta menyediakan dasar untuk pengembangan mekanisme mitigasi berkelanjutan melalui integrasi dengan _Web Application Firewall (WAF)_ atau IPS dan penyusunan kebijakan keamanan yang lebih baik (Abdalla et al., 2025) (Mercu Buana, 2024). Dengan demikian, penelitian berjudul Mitigasi Intrusion Detection Berbasis Analisis Log Akses Web Server Dengan Pendekatan Rule-Based Untuk Serangan _Xss_ Dan _Sql Injection_ menjadi penting untuk dikembangkan sebagai kontribusi pada penguatan keamanan web server dalam era ancaman siber yang terus berkembang.
+
+## Rumusan Masalah
+
+Serangan _SQL Injection (SQLi)_ dan _Cross‑Site Scripting (XSS)_ kian variatif melalui beragam _encoding_ sehingga sering lolos dari aturan statis jika tidak didahului _decoding_/normalisasi yang memadai (Tadhani et al., 2024). Padahal, akses log menyimpan konteks permintaan _HTTP_ yang relevan untuk mendeteksi _SQLi/XSS_, namun belum dimanfaatkan secara sistematis untuk membangun _ruleset_ yang transparan, adaptif, dan berlatensi rendah (Abdalla et al., 2025). Sementara itu, banyak pendekatan _ML/DL_ menghadapi isu generalisasi dan false positive, sehingga diperlukan optimasi pendekatan rule‑based di level log beserta rencana integrasi operasional untuk respons cepat (Tadhani et al., 2024) (Abdalla et al., 2025).
+
+Berdasarkan hal
+
+- Bagaimana mengoptimalkan pendekatan _rule-based_ level log akses agar menghasilkan _ruleset_ yang transparan, adaptif, dan memiliki latensi rendah?
+- Seberapa besar pengaruh proses _decoding_ dan _normalisasi_ pada _access log_ _web server_ terhadap peningkatan kemampuan deteksi pola serangan _SQL Injection_ dan _XSS_ yang disamarkan melalui _obfuscation_ serta berbagai teknik encoding?
+- Bagaimana performa sistem deteksi intrusi berbasis rule tersebut dalam mendeteksi serangan _XSS_ dan SQL Injection ditinjau dari metrik akurasi, precision, recall, dan F1-score?
+
+## Tujuan Penelitian
+
+- Mengidentifikasi karakteristik dan pola request HTTP yang merepresentasikan serangan SQL Injection dan XSS pada access log, termasuk variasi obfuscation dan encoding yang umum digunakan.
+- Menyusun ruleset deteksi berbasis pattern matching (misalnya regex/token rule) untuk klasifikasi trafik menjadi normal dan indikasi serangan (SQLi/XSS), termasuk aturan penguat/pengecualian untuk menekan false positive
+- Menghasilkan prototipe aplikasi berbasis Python yang membaca, mem-parsing, memproses, dan memberikan penandaan/alert hasil analisis dari access log secara otomatis.
+- Mengevaluasi performa sistem deteksi intrusi yang dibangun menggunakan metrik akurasi, precision, recall, dan F1-score.
+
+## Ruang Lingkup
+
+- Penelitian dibatasi pada lingkungan uji terkontrol dengan menggunakan satu buah _web server Nginx_ yang berjalan pada sistem operasi _Ubuntu Server_. Aplikasi web yang digunakan merupakan aplikasi uji yang dirancang untuk mensimulasikan skenario serangan, sehingga tidak mencerminkan kompleksitas penuh aplikasi web berskala produksi.
+- Pendekatan deteksi _Rule-based_ pada _layer log_, mencakup tahap _decoding_/normalisasi _URL_ dan pencocokan aturan atas struktur khas _SQLi_/_XSS_, tidak menggunakan model _machine learning_.
+- Field yang dianalisis meliputi _IP, timestamp, method, path, query string, status code, size, referrer, dan user-agent_ sebagaimana tersedia pada _Combined Log_.
+- Implementasi berupa modul _parser_ dan _engine_ aturan yang memproses file _access.log_ pada web server*.*
+- Implementasi sistem _Intrusion Detection_ dibatasi pada pengembangan aplikasi berbasis _Python_ yang bertugas membaca, mem-parsing, dan menganalisis log akses _web server_, serta memberikan penandaan terhadap request sebagai trafik normal ataupun indikasi serangan.
+
+## 1.5. Metodologi Penelitian
+
+Metodologi penelitian ini menerapkan pendekatan rule based dengan teknik pattern matching untuk mengidentifikasi indikasi serangan _Cross Site Scripting_ dan _SQL Injection_ berdasarkan log akses web server _Nginx_. Proses penelitian diawali dengan pengumpulan data log pada rentang waktu tertentu, kemudian dilakukan praproses yang mencakup pembersihan data, normalisasi format _URL_, _decoding parameter_, serta ekstraksi atribut penting seperti _timestamp, alamat IP, metode HTTP, URI, query string, user agent_, dan kode status. Selanjutnya, disusun seperangkat aturan deteksi berbasis pola dan kata kunci yang merepresentasikan karakteristik serangan, lalu diimplementasikan untuk mengklasifikasikan setiap permintaan menjadi kategori normal atau terindikasi serangan beserta jenisnya.
+
+Tahap evaluasi dilakukan dengan menguji aturan pada dataset log untuk menilai kinerja deteksi dan tingkat kesalahan. Validasi hasil dilaksanakan melalui peninjauan sampel log secara manual dan pembandingan dengan referensi pola serangan yang umum digunakan, kemudian dihitung metrik evaluasi berupa akurasi, _precision, recall,_ serta _false positive rate_. Apabila ditemukan tingkat kesalahan yang tinggi atau terdapat indikasi serangan yang tidak terdeteksi, aturan disempurnakan melalui penyesuaian pola, penambahan pengecualian, dan pengetatan kriteria deteksi hingga diperoleh aturan yang konsisten dan layak direkomendasikan sebagai dukungan mitigasi melalui pemantauan log akses _Nginx_.
