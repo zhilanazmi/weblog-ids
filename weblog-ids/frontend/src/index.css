@@ -1,4 +1,4 @@
-/* index.css - Tema dashboard WebLog-IDS dengan gaya SOC modern. */
+﻿/* index.css - Tema dashboard WebLog-IDS dengan gaya SOC modern. */
 
 :root {
   color-scheme: dark;
@@ -363,6 +363,17 @@ td.wrap {
   background: linear-gradient(135deg, var(--normal), #15803d);
 }
 
+
+/* ---------- Badge sumber label (ground truth) ---------- */
+.badge.src-generator {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+.badge.src-manual {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+.badge.src-auto {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
 /* ---------- Row tint berdasarkan severity ---------- */
 tr.sev-high td {
   background: rgba(239, 68, 68, 0.085);
@@ -614,4 +625,5 @@ button:disabled {
     padding: 10px;
   }
 }
+
 

@@ -1,4 +1,4 @@
--- =====================================================================
+﻿-- =====================================================================
 -- WebLog-IDS - Skema Database MySQL
 -- =====================================================================
 -- File ini bisa dijalankan manual lewat phpMyAdmin (tab SQL) atau CLI:
@@ -96,3 +96,18 @@ CREATE TABLE IF NOT EXISTS evaluation_runs (
     macro_f1    DOUBLE,
     json_result LONGTEXT
 );
+-- ---------------------------------------------------------------------
+-- Tabel ground_truth: label aktual dari generator serangan terkontrol.
+-- Dipakai untuk mencocokkan prediksi IDS dengan kebenaran saat evaluasi.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ground_truth (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    sent_at      DATETIME NOT NULL,
+    source_ip    VARCHAR(45),
+    method       VARCHAR(10),
+    request_uri  TEXT,
+    payload      TEXT,
+    actual_label VARCHAR(20) NOT NULL,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+

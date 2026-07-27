@@ -1,4 +1,4 @@
-"""
+﻿"""
 database.py - Lapisan akses database MySQL untuk WebLog-IDS.
 
 Menggunakan PyMySQL (driver murni Python, mudah dipasang di Windows/Linux).
@@ -104,18 +104,32 @@ CREATE TABLE IF NOT EXISTS evaluation_runs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 """
 
+_CREATE_GROUND_TRUTH = """
+CREATE TABLE IF NOT EXISTS ground_truth (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    sent_at      DATETIME NOT NULL,
+    source_ip    VARCHAR(45),
+    method       VARCHAR(10),
+    request_uri  TEXT,
+    payload      TEXT,
+    actual_label VARCHAR(20) NOT NULL,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+"""
 _ALL_TABLES = [
     _CREATE_ACCESS_LOGS,
     _CREATE_DETECTION_RESULTS,
     _CREATE_RULES,
     _CREATE_EVALUATION_RESULTS,
     _CREATE_EVALUATION_RUNS,
+    _CREATE_GROUND_TRUTH,
 ]
 
 _DETECTION_RESULT_COLUMNS = {
     "actual_label": "ALTER TABLE detection_results ADD COLUMN actual_label VARCHAR(20) NULL DEFAULT NULL",
     "labeled_at": "ALTER TABLE detection_results ADD COLUMN labeled_at DATETIME NULL DEFAULT NULL",
     "labeled_by": "ALTER TABLE detection_results ADD COLUMN labeled_by VARCHAR(100) NULL DEFAULT NULL",
+    "ground_truth_id": "ALTER TABLE detection_results ADD COLUMN ground_truth_id INT NULL DEFAULT NULL",
 }
 
 
@@ -294,3 +308,4 @@ if __name__ == "__main__":
             print("[Database] Tabel tersedia:", tables)
     finally:
         conn.close()
+

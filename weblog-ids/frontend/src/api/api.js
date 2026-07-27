@@ -1,4 +1,4 @@
-// api.js - Konfigurasi terpusat untuk akses backend WebLog-IDS.
+﻿// api.js - Konfigurasi terpusat untuk akses backend WebLog-IDS.
 //
 // Semua URL backend didefinisikan di sini lewat BASE_URL agar tidak perlu
 // di-hardcode berulang di banyak komponen. Bila backend pindah host/port,
@@ -81,6 +81,13 @@ export const fetchEvaluationResults = () => getJSON("/api/evaluation/results");
 
 export const exportEvaluationCsvUrl = () =>
   `${BASE_URL}/api/evaluation/export-csv`;
+
+// ---------- Endpoint ground truth matching ----------
+export const matchGroundTruth = () => postJSON("/api/evaluation/match-ground-truth");
+
+// ---------- Endpoint attack generator ----------
+export const runGenerator = (payload) => postJSON("/api/generator/run", payload);
+export const fetchGeneratorStatus = () => getJSON("/api/generator/status");
 
 export const fetchHealth = () => getJSON("/api/health");
 

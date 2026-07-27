@@ -1,4 +1,4 @@
-"""
+﻿"""
 evaluation_routes.py - Endpoint REST evaluasi OvR strict 4-kelas.
 
 Route ini hanya mengorkestrasi request/response. Rumus evaluasi ada di
@@ -21,6 +21,7 @@ if _BACKEND_DIR not in sys.path:
 
 import database
 from evaluation.evaluator import CLASSES, run_evaluation, get_latest_evaluation_run
+from evaluation.matcher import match_ground_truth, mark_unlabeled_as_normal
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"])
 
@@ -81,6 +82,17 @@ def run_evaluation_endpoint() -> Dict[str, Any]:
     return run_evaluation()
 
 
+@router.post("/match-ground-truth")
+def match_ground_truth_endpoint() -> Dict[str, Any]:
+    """Cocokkan hasil deteksi yang belum dilabeli dengan ground truth generator."""
+    return match_ground_truth()
+
+
+@router.post("/mark-unlabeled-as-normal")
+def mark_unlabeled_as_normal_endpoint() -> Dict[str, Any]:
+    """Label semua record tanpa ground truth sebagai Normal (auto-normal)."""
+    return mark_unlabeled_as_normal()
+
 @router.post("/clear")
 def clear_evaluation() -> Dict[str, Any]:
     """
@@ -137,3 +149,4 @@ def export_evaluation_csv():
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="weblog_ids_evaluation.csv"'},
     )
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 main.py - Entry point FastAPI WebLog-IDS.
 
 Saat startup:
@@ -32,6 +32,7 @@ from routes.dashboard_routes import router as dashboard_router
 from routes.websocket_routes import router as websocket_router
 from routes.report_routes import router as report_router
 from routes.evaluation_routes import router as evaluation_router
+from routes.generator_routes import router as generator_router
 
 # Referensi global agar watcher bisa dihentikan saat shutdown.
 _watcher: LogWatcher = None
@@ -98,6 +99,8 @@ app.include_router(websocket_router)
 app.include_router(report_router)
 # Router evaluasi OvR strict 4-kelas (/api/evaluation/*).
 app.include_router(evaluation_router)
+# Router attack generator (/api/generator/*).
+app.include_router(generator_router)
 
 
 @app.get("/api/health")
