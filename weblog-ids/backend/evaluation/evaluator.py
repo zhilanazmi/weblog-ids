@@ -115,30 +115,35 @@ def compute_overall_metrics(
     }
 
 
-def _fetch_labeled_records() -> List[Dict[str, Any]]:
-    """Ambil record yang sudah memiliki ground truth dari database."""
+def _fetch_labeled_records(days: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Ambil record ber-ground truth, opsional terbatas pada N hari terakhir."""
     sql = """
         SELECT d.id, d.label AS predicted_label, d.actual_label
         FROM detection_results d
         WHERE d.actual_label IS NOT NULL
     """
+    params: List[Any] = []
+    if days is not None:
+        sql += " AND d.created_at >= NOW() - INTERVAL %s DAY"
+        params.append(days)
     conn = database.get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, params)
             return cur.fetchall()
     finally:
         conn.close()
 
 
-def _save_evaluation_run(result: Dict[str, Any]) -> int:
+def _save_evaluation_run(result: Dict[str, Any], days: Optional[int]) -> int:
     """Simpan snapshot hasil evaluasi ke evaluation_runs sebagai JSON."""
     sql = """
-        INSERT INTO evaluation_runs (accuracy, macro_f1, json_result)
-        VALUES (%s, %s, %s)
+        INSERT INTO evaluation_runs (days, accuracy, macro_f1, json_result)
+        VALUES (%s, %s, %s, %s)
     """
     overall = result["overall_metrics"]
     params = (
+        days,
         overall["accuracy"],
         overall["macro_f1"],
         json.dumps(result, ensure_ascii=False),
@@ -152,14 +157,14 @@ def _save_evaluation_run(result: Dict[str, Any]) -> int:
         conn.close()
 
 
-def run_evaluation(db_session: Optional[Any] = None) -> Dict[str, Any]:
+def run_evaluation(days: Optional[int] = None, db_session: Optional[Any] = None) -> Dict[str, Any]:
     """
     Jalankan evaluasi dari record DB yang sudah dilabeli manual.
 
     Parameter db_session disediakan agar signature sesuai spesifikasi, tetapi
     proyek ini memakai PyMySQL manual via database.get_connection(), bukan ORM.
     """
-    records = _fetch_labeled_records()
+    records = _fetch_labeled_records(days)
     confusion_matrix = compute_confusion_matrix(records)
     ovr_metrics = compute_ovr_metrics(confusion_matrix)
     overall_metrics = compute_overall_metrics(confusion_matrix, ovr_metrics)
@@ -168,24 +173,30 @@ def run_evaluation(db_session: Optional[Any] = None) -> Dict[str, Any]:
         "confusion_matrix": confusion_matrix,
         "ovr_metrics": ovr_metrics,
         "overall_metrics": overall_metrics,
+        "days": days,
     }
-    run_id = _save_evaluation_run(result)
+    run_id = _save_evaluation_run(result, days)
     result["run_id"] = run_id
     return result
 
 
-def get_latest_evaluation_run() -> Optional[Dict[str, Any]]:
-    """Ambil snapshot evaluasi terbaru dari evaluation_runs."""
+def get_latest_evaluation_run(days: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Ambil snapshot evaluasi terbaru untuk rentang waktu yang dipilih."""
     sql = """
-        SELECT id, run_at, accuracy, macro_f1, json_result
+        SELECT id, run_at, days, accuracy, macro_f1, json_result
         FROM evaluation_runs
-        ORDER BY id DESC
-        LIMIT 1
     """
+    params: List[Any] = []
+    if days is None:
+        sql += " WHERE days IS NULL"
+    else:
+        sql += " WHERE days = %s"
+        params.append(days)
+    sql += " ORDER BY id DESC LIMIT 1"
     conn = database.get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, params)
             row = cur.fetchone()
     finally:
         conn.close()
@@ -195,6 +206,7 @@ def get_latest_evaluation_run() -> Optional[Dict[str, Any]]:
     payload = json.loads(row.get("json_result") or "{}")
     payload["run_id"] = row.get("id")
     payload["run_at"] = row.get("run_at")
+    payload["days"] = row.get("days")
     return payload
 
 

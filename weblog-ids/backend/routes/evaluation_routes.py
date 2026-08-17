@@ -12,7 +12,7 @@ from typing import Dict, Any
 import os
 import sys
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,13 +25,22 @@ from evaluation.matcher import match_ground_truth, mark_unlabeled_as_normal
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"])
 
+_ALLOWED_DAYS = frozenset({7, 14, 30})
 
-def _latest_or_run() -> Dict[str, Any]:
+
+def _parse_days(days: int) -> int:
+    """Validasi rentang evaluasi agar hanya periode yang tersedia di UI dipakai."""
+    if days not in _ALLOWED_DAYS:
+        raise HTTPException(status_code=400, detail="Parameter days harus 7, 14, atau 30.")
+    return days
+
+
+def _latest_or_run(days: int) -> Dict[str, Any]:
     """Ambil evaluasi terbaru; bila belum ada, jalankan evaluasi baru."""
-    latest = get_latest_evaluation_run()
+    latest = get_latest_evaluation_run(days)
     if latest is not None:
         return latest
-    return run_evaluation()
+    return run_evaluation(days)
 
 
 def _build_evaluation_csv(result: Dict[str, Any]) -> str:
@@ -77,9 +86,9 @@ def _build_evaluation_csv(result: Dict[str, Any]) -> str:
 
 
 @router.post("/run")
-def run_evaluation_endpoint() -> Dict[str, Any]:
-    """Jalankan evaluasi dari semua record yang sudah memiliki actual_label."""
-    return run_evaluation()
+def run_evaluation_endpoint(days: int = Query(7)) -> Dict[str, Any]:
+    """Jalankan evaluasi dari record berlabel pada rentang waktu terpilih."""
+    return run_evaluation(_parse_days(days))
 
 
 @router.post("/match-ground-truth")
@@ -123,15 +132,15 @@ def clear_evaluation() -> Dict[str, Any]:
 
 
 @router.get("/results")
-def get_results() -> Dict[str, Any]:
-    """Ambil hasil evaluasi terakhir; jika belum ada, jalankan evaluasi baru."""
-    return _latest_or_run()
+def get_results(days: int = Query(7)) -> Dict[str, Any]:
+    """Ambil hasil evaluasi terakhir untuk rentang waktu yang dipilih."""
+    return _latest_or_run(_parse_days(days))
 
 
 @router.get("/confusion-matrix")
-def get_confusion_matrix() -> Dict[str, Any]:
+def get_confusion_matrix(days: int = Query(7)) -> Dict[str, Any]:
     """Return hanya confusion matrix 4x4 untuk render tabel UI."""
-    result = _latest_or_run()
+    result = _latest_or_run(_parse_days(days))
     return {
         "classes": result.get("classes", CLASSES),
         "confusion_matrix": result.get("confusion_matrix", {}),
@@ -139,9 +148,9 @@ def get_confusion_matrix() -> Dict[str, Any]:
 
 
 @router.get("/export-csv")
-def export_evaluation_csv():
+def export_evaluation_csv(days: int = Query(7)):
     """Export confusion matrix + metrik evaluasi terbaru sebagai CSV."""
-    result = _latest_or_run()
+    result = _latest_or_run(_parse_days(days))
     csv_content = _build_evaluation_csv(result)
     data_bytes = csv_content.encode("utf-8-sig")
     return StreamingResponse(

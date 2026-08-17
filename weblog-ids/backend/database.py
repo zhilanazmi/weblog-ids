@@ -98,6 +98,7 @@ _CREATE_EVALUATION_RUNS = """
 CREATE TABLE IF NOT EXISTS evaluation_runs (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     run_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    days        INT NULL DEFAULT NULL,
     accuracy    DOUBLE,
     macro_f1    DOUBLE,
     json_result LONGTEXT
@@ -130,6 +131,10 @@ _DETECTION_RESULT_COLUMNS = {
     "labeled_at": "ALTER TABLE detection_results ADD COLUMN labeled_at DATETIME NULL DEFAULT NULL",
     "labeled_by": "ALTER TABLE detection_results ADD COLUMN labeled_by VARCHAR(100) NULL DEFAULT NULL",
     "ground_truth_id": "ALTER TABLE detection_results ADD COLUMN ground_truth_id INT NULL DEFAULT NULL",
+}
+
+_EVALUATION_RUN_COLUMNS = {
+    "days": "ALTER TABLE evaluation_runs ADD COLUMN days INT NULL DEFAULT NULL",
 }
 
 
@@ -186,6 +191,7 @@ def init_db() -> None:
             for ddl in _ALL_TABLES:
                 cur.execute(ddl)
             _ensure_detection_label_columns(cur)
+            _ensure_evaluation_run_columns(cur)
     finally:
         conn.close()
 
@@ -208,6 +214,22 @@ def _ensure_detection_label_columns(cur) -> None:
     )
     existing = {row["COLUMN_NAME"] for row in cur.fetchall()}
     for column, ddl in _DETECTION_RESULT_COLUMNS.items():
+        if column not in existing:
+            cur.execute(ddl)
+
+
+def _ensure_evaluation_run_columns(cur) -> None:
+    """Migrasi ringan untuk metadata periode pada snapshot evaluasi lama."""
+    cur.execute(
+        """
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'evaluation_runs'
+        """,
+        (config.DB_NAME,),
+    )
+    existing = {row["COLUMN_NAME"] for row in cur.fetchall()}
+    for column, ddl in _EVALUATION_RUN_COLUMNS.items():
         if column not in existing:
             cur.execute(ddl)
 

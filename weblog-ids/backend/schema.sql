@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS evaluation_results (
 CREATE TABLE IF NOT EXISTS evaluation_runs (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     run_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    days        INT NULL DEFAULT NULL,
     accuracy    DOUBLE,
     macro_f1    DOUBLE,
     json_result LONGTEXT

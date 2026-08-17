@@ -21,6 +21,7 @@ const LABELS = ["Semua", "Normal", "XSS", "SQLi", "Multiple"];
 const EVAL_CLASSES = ["XSS", "SQLi", "Normal", "Multiple"];
 const PAGE_SIZE = 20;
 const DEFAULT_TARGET = "https://dvwa.zhilanazmi.id";
+const EVALUATION_DAYS = [7, 14, 30];
 
 function formatRules(matched) {
   if (!matched) return "-";
@@ -60,6 +61,7 @@ export default function Evaluation() {
   const [error, setError] = useState("");
   const [evalResult, setEvalResult] = useState(null);
   const [evalLoading, setEvalLoading] = useState(false);
+  const [evaluationDays, setEvaluationDays] = useState(7);
 
   // State generator (Bagian A)
   const [gTarget, setGTarget] = useState(DEFAULT_TARGET);
@@ -94,12 +96,12 @@ export default function Evaluation() {
 
   const loadEvaluation = useCallback(async () => {
     try {
-      const res = await fetchEvaluationResults();
+      const res = await fetchEvaluationResults(evaluationDays);
       setEvalResult(res);
     } catch {
       // Evaluasi bisa belum ada; tombol Run Evaluation akan membuat snapshot.
     }
-  }, []);
+  }, [evaluationDays]);
 
   useEffect(() => { loadDetections(); }, [loadDetections]);
   useEffect(() => { loadEvaluation(); }, [loadEvaluation]);
@@ -196,7 +198,7 @@ export default function Evaluation() {
   const onRunEvaluation = async () => {
     setEvalLoading(true);
     try {
-      const res = await runEvaluation();
+      const res = await runEvaluation(evaluationDays);
       setEvalResult(res);
       setError("");
     } catch (e) {
@@ -206,7 +208,7 @@ export default function Evaluation() {
     }
   };
 
-  const onExportEvaluation = () => { window.open(exportEvaluationCsvUrl(), "_blank"); };
+  const onExportEvaluation = () => { window.open(exportEvaluationCsvUrl(evaluationDays), "_blank"); };
 
   const onClearEvaluation = async () => {
     const ok = window.confirm(
@@ -360,11 +362,20 @@ export default function Evaluation() {
           <button onClick={onRunEvaluation} disabled={evalLoading}>
             {evalLoading ? "Menghitung..." : "Run Evaluation"}
           </button>
+          <label>Rentang waktu:
+            <select
+              value={evaluationDays}
+              disabled={evalLoading}
+              onChange={(e) => setEvaluationDays(Number(e.target.value))}
+            >
+              {EVALUATION_DAYS.map((days) => <option key={days} value={days}>{days} hari terakhir</option>)}
+            </select>
+          </label>
           <button onClick={onClearEvaluation} disabled={evalLoading || loading}>
             Clear Evaluasi
           </button>
           <button onClick={onExportEvaluation}>Export Hasil Evaluasi (CSV)</button>
-          {evalResult?.run_id && <span className="label">Run ID: {evalResult.run_id}</span>}
+          {evalResult?.run_id && <span className="label">Run ID: {evalResult.run_id} | Periode: {evaluationDays} hari terakhir</span>}
         </div>
 
         {!evalResult && <p className="label">Belum ada hasil evaluasi.</p>}
@@ -373,9 +384,9 @@ export default function Evaluation() {
           <>
             <div className="cards eval-cards">
               <div className="card"><span className="label">Accuracy</span><div className="value">{fmt(overall.accuracy)}</div></div>
-              <div className="card"><span className="label">Macro-F1</span><div className="value">{fmt(overall.macro_f1)}</div></div>
-              <div className="card"><span className="label">Macro-Precision</span><div className="value">{fmt(overall.macro_precision)}</div></div>
-              <div className="card"><span className="label">Macro-Recall</span><div className="value">{fmt(overall.macro_recall)}</div></div>
+              <div className="card"><span className="label">Precision</span><div className="value">{fmt(overall.macro_precision)}</div></div>
+              <div className="card"><span className="label">Recall</span><div className="value">{fmt(overall.macro_recall)}</div></div>
+              <div className="card"><span className="label">F1-Score</span><div className="value">{fmt(overall.macro_f1)}</div></div>
               <div className="card"><span className="label">Total Labeled</span><div className="value">{overall.total_labeled || 0}</div></div>
             </div>
 

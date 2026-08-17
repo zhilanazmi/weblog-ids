@@ -75,12 +75,12 @@ export const markUnlabeledAsNormal = () =>
   postJSON("/api/detections/mark-unlabeled-as-normal");
 
 // ---------- Endpoint evaluasi ----------
-export const runEvaluation = () => postJSON("/api/evaluation/run");
+export const runEvaluation = (days) => postJSON(`/api/evaluation/run?days=${days}`);
 export const clearEvaluation = () => postJSON("/api/evaluation/clear");
-export const fetchEvaluationResults = () => getJSON("/api/evaluation/results");
+export const fetchEvaluationResults = (days) => getJSON(`/api/evaluation/results?days=${days}`);
 
-export const exportEvaluationCsvUrl = () =>
-  `${BASE_URL}/api/evaluation/export-csv`;
+export const exportEvaluationCsvUrl = (days) =>
+  `${BASE_URL}/api/evaluation/export-csv?days=${days}`;
 
 // ---------- Endpoint ground truth matching ----------
 export const matchGroundTruth = () => postJSON("/api/evaluation/match-ground-truth");
