@@ -42,7 +42,7 @@ POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "0.5"))
 # Preprocessing
 # ---------------------------------------------------------------------------
 # Batas maksimal recursive URL decoding untuk menangani double/triple encoding.
-MAX_DECODE_ROUND = int(os.getenv("MAX_DECODE_ROUND", "3"))
+MAX_DECODE_ROUND = int(os.getenv("MAX_DECODE_ROUND", "0"))
 
 # ---------------------------------------------------------------------------
 # Database (MySQL)
