@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS detection_results (
     severity           VARCHAR(20),
     matched_rules      TEXT,
     recommendation     TEXT,
+    latency_ms         DOUBLE NULL DEFAULT NULL,  -- waktu proses deteksi (ms)
     actual_label       VARCHAR(20) NULL DEFAULT NULL,
     labeled_at         DATETIME NULL DEFAULT NULL,
     labeled_by         VARCHAR(100) NULL DEFAULT NULL,

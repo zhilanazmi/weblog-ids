@@ -30,6 +30,7 @@ export default function AlertTable({ rows }) {
           <th>Label</th>
           <th>Severity</th>
           <th>Rules</th>
+          <th>Latency</th>
         </tr>
       </thead>
       <tbody>
@@ -46,6 +47,9 @@ export default function AlertTable({ rows }) {
               <span className={`badge ${r.severity}`}>{r.severity}</span>
             </td>
             <td className="wrap">{formatRules(r.matched_rules)}</td>
+            <td>
+              {r.latency_ms != null ? `${r.latency_ms} ms` : "-"}
+            </td>
           </tr>
         ))}
       </tbody>

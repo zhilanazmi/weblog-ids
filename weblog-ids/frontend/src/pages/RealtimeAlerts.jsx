@@ -15,6 +15,12 @@ function formatRules(matched) {
   return matched || "-";
 }
 
+// Format latency ms menjadi string ringkas (ms, atau detik bila >= 1000ms).
+function formatLatency(ms) {
+  if (ms == null || isNaN(ms)) return "-";
+  return ms >= 1000 ? `${(ms / 1000).toFixed(2)} s` : `${ms} ms`;
+}
+
 export default function RealtimeAlerts() {
   const [alerts, setAlerts] = useState([]);
   const [connected, setConnected] = useState(false);
@@ -41,6 +47,9 @@ export default function RealtimeAlerts() {
           const alert = JSON.parse(event.data);
           // beri id unik lokal untuk key React (timestamp + waktu terima).
           alert._id = `${Date.now()}-${Math.random()}`;
+          // Waktu alert diterima browser: dipakai menghitung latency
+          // pengiriman (browser - detected_at dari backend).
+          alert._received_at = Date.now();
           setAlerts((prev) => [alert, ...prev].slice(0, 100)); // batasi 100
         } catch {
           // abaikan pesan non-JSON
@@ -116,6 +125,16 @@ export default function RealtimeAlerts() {
           <div className="row">
             <span className="key">Rules:</span>
             {formatRules(a.matched_rules)}
+          </div>
+          <div className="row">
+            <span className="key">Latency Deteksi:</span>
+            {formatLatency(a.latency_ms)}
+            <span className="key" style={{ marginLeft: 12 }}>
+              Latency Pengiriman:
+            </span>
+            {a.detected_at
+              ? formatLatency(a._received_at - a.detected_at)
+              : "-"}
           </div>
           <div className="row">
             <span className="key">Rekomendasi:</span>

@@ -15,6 +15,7 @@ from typing import Optional, Dict, Any, List
 
 import os
 import sys
+import time
 import asyncio
 
 _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -50,7 +51,14 @@ class DetectionPipeline:
         """
         Proses satu baris log. Mengembalikan dict ringkasan hasil deteksi,
         atau None bila baris invalid (di-skip, sesuai PRD cleaning).
+
+        Latency diukur dengan time.perf_counter() dari awal proses (parse)
+        sampai hasil deteksi tersimpan di database. Nilainya (ms) disimpan
+        di kolom detection_results.latency_ms dan dikirim ke alert WebSocket
+        sebagai bukti sistem mendeteksi secara realtime.
         """
+        started = time.perf_counter()
+
         # 1. Parse. Baris gagal parse -> skip tanpa menghentikan sistem.
         parsed = parse_log_line(line)
         if parsed is None:
@@ -82,6 +90,12 @@ class DetectionPipeline:
         log_id = database.save_access_log(parsed)
         detection_id = database.save_detection_result(log_id, hasil_deteksi)
 
+        # Latency total pipeline: parse -> preprocess -> rule match ->
+        # klasifikasi -> simpan DB. Disimpan setelah INSERT karena nilai
+        # lengkapnya baru diketahui setelah kedua insert selesai.
+        latency_ms = round((time.perf_counter() - started) * 1000, 3)
+        database.update_detection_latency(detection_id, latency_ms)
+
         # 9. Jika ini serangan (bukan Normal), kirim alert realtime ke WebSocket.
         if label in _ATTACK_LABELS:
             alert_payload = {
@@ -94,6 +108,11 @@ class DetectionPipeline:
                 "severity": severity,
                 "matched_rules": [m["id"] for m in matched],
                 "recommendation": recommendation,
+                # latency_ms: waktu proses deteksi di sisi server (ms).
+                "latency_ms": latency_ms,
+                # detected_at: epoch ms saat deteksi selesai, dipakai frontend
+                # untuk menghitung latency pengiriman alert sampai ke browser.
+                "detected_at": int(time.time() * 1000),
             }
             self._broadcast_alert(alert_payload)
 
@@ -105,6 +124,7 @@ class DetectionPipeline:
             "label": label,
             "severity": severity,
             "matched_rules": [m["id"] for m in matched],
+            "latency_ms": latency_ms,
         }
 
     def _broadcast_alert(self, alert_payload: Dict[str, Any]) -> None:

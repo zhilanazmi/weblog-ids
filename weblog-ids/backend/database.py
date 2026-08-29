@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS detection_results (
     severity           VARCHAR(20),
     matched_rules      TEXT,
     recommendation     TEXT,
+    latency_ms         DOUBLE NULL DEFAULT NULL,
     actual_label       VARCHAR(20) NULL DEFAULT NULL,
     labeled_at         DATETIME NULL DEFAULT NULL,
     labeled_by         VARCHAR(100) NULL DEFAULT NULL,
@@ -131,6 +132,7 @@ _DETECTION_RESULT_COLUMNS = {
     "labeled_at": "ALTER TABLE detection_results ADD COLUMN labeled_at DATETIME NULL DEFAULT NULL",
     "labeled_by": "ALTER TABLE detection_results ADD COLUMN labeled_by VARCHAR(100) NULL DEFAULT NULL",
     "ground_truth_id": "ALTER TABLE detection_results ADD COLUMN ground_truth_id INT NULL DEFAULT NULL",
+    "latency_ms": "ALTER TABLE detection_results ADD COLUMN latency_ms DOUBLE NULL DEFAULT NULL",
 }
 
 _EVALUATION_RUN_COLUMNS = {
@@ -279,7 +281,8 @@ def save_detection_result(log_id: int, hasil_deteksi: Dict[str, Any]) -> int:
 
     hasil_deteksi diharapkan berisi:
         decoded_payload, normalized_payload, label, severity,
-        matched_rules (list/iterable), recommendation
+        matched_rules (list/iterable), recommendation,
+        latency_ms (opsional, float)
 
     matched_rules diserialisasi menjadi JSON string (mis. ["XSS-001"]) agar
     muat di kolom TEXT dan mudah dibaca kembali.
@@ -295,8 +298,8 @@ def save_detection_result(log_id: int, hasil_deteksi: Dict[str, Any]) -> int:
     sql = """
         INSERT INTO detection_results
             (log_id, decoded_payload, normalized_payload, label, severity,
-             matched_rules, recommendation)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+             matched_rules, recommendation, latency_ms)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
     params = (
         log_id,
@@ -306,12 +309,34 @@ def save_detection_result(log_id: int, hasil_deteksi: Dict[str, Any]) -> int:
         hasil_deteksi.get("severity"),
         matched_json,
         hasil_deteksi.get("recommendation"),
+        hasil_deteksi.get("latency_ms"),
     )
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(sql, params)
             return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def update_detection_latency(detection_id: int, latency_ms: float) -> None:
+    """
+    Perbarui kolom latency_ms pada satu baris detection_results.
+
+    Dipanggil pipeline setelah seluruh tahap deteksi (parse -> preprocess ->
+    rule match -> klasifikasi -> INSERT) selesai, karena nilai latency total
+    baru diketahui setelah kedua INSERT (access_log & detection_results)
+    dijalankan.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE detection_results SET latency_ms = %s WHERE id = %s",
+                (latency_ms, detection_id),
+            )
+        conn.commit()
     finally:
         conn.close()
 

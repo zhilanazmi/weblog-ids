@@ -99,7 +99,7 @@ def get_detections(
         SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
                d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                d.labeled_by, d.severity, d.matched_rules,
-               d.recommendation, d.created_at
+               d.recommendation, d.latency_ms, d.created_at
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
     """
@@ -152,7 +152,7 @@ def get_latest_detections(
         SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
                d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                d.labeled_by, d.severity, d.matched_rules,
-               d.recommendation, d.created_at
+               d.recommendation, d.latency_ms, d.created_at
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
         WHERE d.label IN ({placeholders})
@@ -203,7 +203,7 @@ def set_actual_label(
                 SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
                        d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                        d.labeled_by, d.severity, d.matched_rules,
-                       d.recommendation, d.created_at
+                       d.recommendation, d.latency_ms, d.created_at
                 FROM detection_results d
                 JOIN access_logs a ON a.id = d.log_id
                 WHERE d.id = %s

@@ -99,6 +99,28 @@ def get_summary(
     # total_alert = semua deteksi yang bukan Normal.
     total_alert = total_logs - total_normal
 
+    # Agregat latency deteksi (ms) sebagai bukti deteksi realtime:
+    # waktu dari baris log diproses sampai hasil tersimpan di database.
+    latency_sql = (
+        "SELECT COUNT(latency_ms) AS samples, AVG(latency_ms) AS avg_ms,"
+        " MIN(latency_ms) AS min_ms, MAX(latency_ms) AS max_ms"
+        " FROM detection_results"
+        f" WHERE 1=1{where_extra}"
+    )
+    conn = database.get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(latency_sql, params)
+            latency_row = cur.fetchone()
+    finally:
+        conn.close()
+    latency = {
+        "samples": latency_row["samples"] or 0,
+        "avg_ms": round(float(latency_row["avg_ms"]), 3) if latency_row["avg_ms"] is not None else None,
+        "min_ms": round(float(latency_row["min_ms"]), 3) if latency_row["min_ms"] is not None else None,
+        "max_ms": round(float(latency_row["max_ms"]), 3) if latency_row["max_ms"] is not None else None,
+    }
+
     return {
         "total_logs": total_logs,
         "total_normal": total_normal,
@@ -106,6 +128,7 @@ def get_summary(
         "total_sqli": total_sqli,
         "total_multiple": total_multiple,
         "total_alert": total_alert,
+        "latency": latency,
         "days": days,
         "watcher_running": app_state.is_watcher_running(),
     }
