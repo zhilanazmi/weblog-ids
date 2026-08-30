@@ -18,6 +18,17 @@ function formatRules(matched) {
   }
 }
 
+// created_at (waktu alert) datang sebagai ISO dari backend; tampilkan
+// jam:menit:detik.milidetik agar presisi ms terlihat (dipakai sebagai bukti
+// deteksi realtime). Kolom "Waktu" tetap menampilkan timestamp log mentah
+// (presisi detik, sesuai format access log Nginx).
+function formatAlertTime(iso) {
+  if (!iso) return "-";
+  const m = String(iso).match(/T(\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?/);
+  if (!m) return String(iso);
+  return m[2] ? `${m[1]}.${m[2].padEnd(3, "0")}` : m[1];
+}
+
 export default function DetectionResults() {
   const [rows, setRows] = useState([]);
   const [label, setLabel] = useState("Semua");
@@ -115,6 +126,7 @@ export default function DetectionResults() {
             <thead>
               <tr>
                 <th>Waktu</th>
+                <th>Waktu Alert</th>
                 <th>IP</th>
                 <th>Method</th>
                 <th>Request URI</th>
@@ -131,6 +143,7 @@ export default function DetectionResults() {
                 // class sev-* memberi warna baris sesuai severity.
                 <tr key={r.id} className={`sev-${r.severity}`}>
                   <td>{r.timestamp}</td>
+                  <td>{formatAlertTime(r.created_at)}</td>
                   <td>{r.ip}</td>
                   <td>{r.method}</td>
                   <td className="wrap">{r.request_uri}</td>

@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS access_logs (
     referrer        TEXT,
     user_agent      TEXT,
     raw_log         TEXT,
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+    -- DATETIME(3): presisi milidetik (waktu baris log diproses sistem).
+    created_at      DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 """
 
@@ -61,7 +62,9 @@ CREATE TABLE IF NOT EXISTS detection_results (
     actual_label       VARCHAR(20) NULL DEFAULT NULL,
     labeled_at         DATETIME NULL DEFAULT NULL,
     labeled_by         VARCHAR(100) NULL DEFAULT NULL,
-    created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- DATETIME(3): presisi milidetik agar waktu alert bisa dibandingkan
+    -- dengan waktu request (bukti deteksi realtime untuk laporan/skripsi).
+    created_at         DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
     FOREIGN KEY (log_id) REFERENCES access_logs(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 """
@@ -139,6 +142,16 @@ _EVALUATION_RUN_COLUMNS = {
     "days": "ALTER TABLE evaluation_runs ADD COLUMN days INT NULL DEFAULT NULL",
 }
 
+# ---------------------------------------------------------------------------
+# Migrasi presisi waktu: kolom created_at lama bertipe DATETIME (presisi
+# detik). Di-upgrade ke DATETIME(3) agar milidetik tersimpan, sehingga selisih
+# waktu request -> alert bisa dihitung presisi untuk keperluan laporan.
+# ---------------------------------------------------------------------------
+_DATETIME_MS_UPGRADES = {
+    "access_logs": "ALTER TABLE access_logs MODIFY COLUMN created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3)",
+    "detection_results": "ALTER TABLE detection_results MODIFY COLUMN created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3)",
+}
+
 
 # ---------------------------------------------------------------------------
 # Koneksi
@@ -194,6 +207,7 @@ def init_db() -> None:
                 cur.execute(ddl)
             _ensure_detection_label_columns(cur)
             _ensure_evaluation_run_columns(cur)
+            _ensure_datetime_ms_precision(cur)
     finally:
         conn.close()
 
@@ -233,6 +247,27 @@ def _ensure_evaluation_run_columns(cur) -> None:
     existing = {row["COLUMN_NAME"] for row in cur.fetchall()}
     for column, ddl in _EVALUATION_RUN_COLUMNS.items():
         if column not in existing:
+            cur.execute(ddl)
+
+
+def _ensure_datetime_ms_precision(cur) -> None:
+    """
+    Migrasi ringan untuk database lama: ubah created_at dari DATETIME
+    (presisi detik) menjadi DATETIME(3) (presisi milidetik) bila perlu.
+    Baris lama mendapat akhiran .000; baris baru menyimpan milidetik nyata.
+    """
+    for table, ddl in _DATETIME_MS_UPGRADES.items():
+        cur.execute(
+            """
+            SELECT DATETIME_PRECISION
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+              AND COLUMN_NAME = 'created_at'
+            """,
+            (config.DB_NAME, table),
+        )
+        row = cur.fetchone()
+        if row is not None and row["DATETIME_PRECISION"] < 3:
             cur.execute(ddl)
 
 

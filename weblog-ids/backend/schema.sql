@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS access_logs (
     referrer        TEXT,
     user_agent      TEXT,
     raw_log         TEXT,
-    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at      DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3)  -- presisi ms
 );
 
 -- ---------------------------------------------------------------------
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS detection_results (
     actual_label       VARCHAR(20) NULL DEFAULT NULL,
     labeled_at         DATETIME NULL DEFAULT NULL,
     labeled_by         VARCHAR(100) NULL DEFAULT NULL,
-    created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at         DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),  -- presisi ms
     FOREIGN KEY (log_id) REFERENCES access_logs(id)
 );
 
