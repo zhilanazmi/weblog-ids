@@ -3,7 +3,9 @@ rule_engine.py - Memuat rule set dan mencocokkan payload dengan regex.
 
 Rule disimpan di file JSON (PRD 1.10) agar mudah ditambah/diubah tanpa
 mengubah kode. Setiap rule minimal punya: id, name, attack_type, pattern,
-severity, description.
+severity, description. Field opsional attack_subtype, cvss_vector, dan
+cvss_score dipakai untuk pemetaan severity berbasis CVSS v3.1 (Tabel 3.3
+& 3.4 pada Penentuan Severity.md).
 """
 
 import json
@@ -92,7 +94,10 @@ def match_rules(
                     "id": rule.get("id"),
                     "name": rule.get("name"),
                     "attack_type": rule.get("attack_type"),
+                    "attack_subtype": rule.get("attack_subtype"),
                     "severity": rule.get("severity"),
+                    "cvss_vector": rule.get("cvss_vector"),
+                    "cvss_score": rule.get("cvss_score"),
                     "description": rule.get("description"),
                 }
             )

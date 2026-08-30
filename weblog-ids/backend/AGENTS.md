@@ -142,7 +142,12 @@ meng-impor `main.py` (yang sudah meng-impor `routes/` -> **circular import**).
 Saat menambah state lintas modul, taruh di `app_state.py`, JANGAN di `main.py`.
 
 Label serangan: `Normal`, `XSS`, `SQLi`, `Multiple` (XSS+SQLi sekaligus).
-Severity: `none`/`low`/`medium`/`high`. Konstanta label serangan
+Severity: `none`/`low`/`medium`/`high`/`critical` dipetakan dari base score CVSS
+v3.1 (Tabel 3.2-3.4 `Penentuan Severity.md`); tiap rule di `rules/*.json`
+punya `severity`, `cvss_vector`, `cvss_score`, dan `attack_subtype`. Konteks
+request menyesuaikan hasil akhir di `classifier.determine_severity`: method
+POST + XSS -> Stored XSS (`critical`), status code blokir
+(400/403/405/406/444) -> Attempt (`low`). Konstanta label serangan
 `_ATTACK_LABELS = ("XSS", "SQLi", "Multiple")` dipakai di `detection_pipeline`
 dan `detection_routes` untuk memicu alert.
 

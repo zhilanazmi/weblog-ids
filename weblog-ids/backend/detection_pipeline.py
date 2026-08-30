@@ -71,8 +71,15 @@ class DetectionPipeline:
         matched = match_rules(payload["normalized_payload"], self.rules)
 
         # 4-6. Klasifikasi, severity, rekomendasi.
+        # Severity mengikuti CVSS v3.1 (Tabel 3.3 & 3.4): rule yang terpicu
+        # memberi base severity, lalu disesuaikan konteks request
+        # (POST -> Stored XSS; status blokir -> Attempt/Low).
         label = classify(matched)
-        severity = determine_severity(matched)
+        severity = determine_severity(
+            matched,
+            method=parsed.get("method"),
+            status_code=parsed.get("status_code"),
+        )
         recommendation = generate_recommendation(
             label, severity, parsed.get("ip", ""), parsed.get("request_uri", "")
         )

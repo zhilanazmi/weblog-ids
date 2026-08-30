@@ -3,32 +3,44 @@
     "id": "XSS-001",
     "name": "XSS Script Tag",
     "attack_type": "XSS",
+    "attack_subtype": "XSS Reflected",
     "pattern": "<\\s*script[^>]*>.*?<\\s*/\\s*script\\s*>",
-    "severity": "high",
-    "description": "Mendeteksi penggunaan tag script pada request"
+    "severity": "medium",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+    "cvss_score": 6.1,
+    "description": "Tag <script> via parameter URL (XSS Reflected, Tabel 3.3)"
   },
   {
     "id": "XSS-002",
     "name": "XSS Event Handler",
     "attack_type": "XSS",
+    "attack_subtype": "XSS DOM-based",
     "pattern": "on(error|load|click|mouseover|focus)\\s*=",
     "severity": "medium",
-    "description": "Mendeteksi event handler JavaScript pada parameter"
+    "cvss_vector": "AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:L/A:N",
+    "cvss_score": 5.4,
+    "description": "Event handler JavaScript dieksekusi sisi klien (XSS DOM-based, Tabel 3.3)"
   },
   {
     "id": "XSS-003",
     "name": "XSS JavaScript URI",
     "attack_type": "XSS",
+    "attack_subtype": "XSS DOM-based",
     "pattern": "javascript\\s*:",
-    "severity": "high",
-    "description": "Mendeteksi penggunaan skema javascript:"
+    "severity": "medium",
+    "cvss_vector": "AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:L/A:N",
+    "cvss_score": 5.4,
+    "description": "Skema javascript: pada atribut payload (XSS DOM-based, Tabel 3.3)"
   },
   {
     "id": "XSS-004",
     "name": "XSS Alert Function",
     "attack_type": "XSS",
+    "attack_subtype": "XSS Reflected",
     "pattern": "(alert|prompt|confirm)\\s*\\(",
     "severity": "medium",
-    "description": "Mendeteksi fungsi JavaScript umum pada payload XSS"
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+    "cvss_score": 6.1,
+    "description": "Fungsi JavaScript umum pada payload XSS (XSS Reflected, Tabel 3.3)"
   }
 ]

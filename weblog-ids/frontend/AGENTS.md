@@ -117,7 +117,7 @@ Backend mengembalikan `{ count, data, ... }`. Komponen selalu baca
 | `WS /ws/alerts` | push JSON alert (field sama + `matched_rules` array) |
 
 Domain nilai: label `Normal`/`XSS`/`SQLi`/`Multiple`; severity
-`none`/`low`/`medium`/`high`. `matched_rules` dari DB bisa berupa string JSON
+`none`/`low`/`medium`/`high`/`critical` (CVSS v3.1). `matched_rules` dari DB bisa berupa string JSON
 (`'["XSS-001"]'`) atau array (WebSocket) — selalu pakai helper `formatRules`
 untuk menampilkannya.
 

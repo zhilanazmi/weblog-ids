@@ -3,80 +3,132 @@
     "id": "SQLI-001",
     "name": "SQLi Union Select",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Union-Based",
     "pattern": "union\\s+select",
     "severity": "high",
-    "description": "Mendeteksi pola UNION SELECT"
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "cvss_score": 7.5,
+    "description": "Pola UNION SELECT: ekstraksi data sensitif (SQLi Union-Based, Tabel 3.4)"
   },
   {
     "id": "SQLI-002",
     "name": "SQLi Boolean Based",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Auth Bypass",
     "pattern": "('|\\\")?\\s*(or|and)\\s+('|\\\")?\\d+('|\\\")?\\s*=\\s*('|\\\")?\\d+",
-    "severity": "high",
-    "description": "Mendeteksi pola boolean-based SQL injection"
+    "severity": "critical",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "cvss_score": 9.8,
+    "description": "Pola boolean ' OR '1'='1: akses tanpa kredensial (SQLi Auth Bypass, Tabel 3.4)"
   },
   {
     "id": "SQLI-003",
     "name": "SQLi Comment Pattern",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Attempt",
     "pattern": "(--|#|/\\*|\\*/)",
-    "severity": "medium",
-    "description": "Mendeteksi komentar SQL yang umum digunakan dalam SQLi"
+    "severity": "low",
+    "cvss_vector": null,
+    "cvss_score": null,
+    "description": "Komentar SQL / karakter anomali tanpa payload utuh: fingerprint, payload belum tereksekusi (SQLi Attempt, Tabel 3.4)"
   },
   {
     "id": "SQLI-004",
     "name": "SQLi Time Based",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Time-Based Blind",
     "pattern": "(sleep\\s*\\(|benchmark\\s*\\(|pg_sleep\\s*\\(|waitfor\\s+delay\\s+|waitfor\\s+time\\s+)",
-    "severity": "high",
-    "description": "Mendeteksi time-based SQL injection: sleep, benchmark, pg_sleep, waitfor delay"
+    "severity": "medium",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+    "cvss_score": 6.5,
+    "description": "Time-based blind SQLi: sleep, benchmark, pg_sleep, waitfor delay (Tabel 3.4)"
   },
   {
     "id": "SQLI-005",
     "name": "SQLi Information Schema",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Union-Based",
     "pattern": "information_schema",
     "severity": "high",
-    "description": "Mendeteksi akses ke information_schema"
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+    "cvss_score": 7.5,
+    "description": "Akses information_schema: ekstraksi metadata database (SQLi Union-Based, Tabel 3.4)"
   },
   {
     "id": "SQLI-006",
     "name": "SQLi DB Version Enumeration",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Error-Based",
     "pattern": "(@@version|@@servername|@@datadir|@@spid|version\\s*\\(\\s*\\)|v\\$version)",
-    "severity": "high",
-    "description": "Mendeteksi enumerasi versi/konfigurasi database: @@version, version(), v$version"
+    "severity": "medium",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+    "cvss_score": 5.3,
+    "description": "Enumerasi versi/konfigurasi database: bocoran info via error (SQLi Error-Based, Tabel 3.4)"
   },
   {
     "id": "SQLI-007",
     "name": "SQLi Oracle Keyword",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Error-Based",
     "pattern": "(rownum|dba_users|all_tables|user_tables|v\\$session|banner\\s+from)",
-    "severity": "high",
-    "description": "Mendeteksi keyword Oracle yang sering dipakai SQLi: rownum, dba_users, banner from"
+    "severity": "medium",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+    "cvss_score": 5.3,
+    "description": "Keyword Oracle untuk enumerasi metadata: bocoran info (SQLi Error-Based, Tabel 3.4)"
   },
   {
     "id": "SQLI-008",
     "name": "SQLi Boolean Parenthesized",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Auth Bypass",
     "pattern": "\\b(or|and)\\s*\\(\\s*['\"]?\\d+['\"]?\\s*=\\s*['\"]?\\d+",
-    "severity": "high",
-    "description": "Mendeteksi boolean-based SQLi dengan tanda kurung: or ('1'='1)"
+    "severity": "critical",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "cvss_score": 9.8,
+    "description": "Boolean-based SQLi dengan tanda kurung, mis. or ('1'='1): auth bypass (Tabel 3.4)"
   },
   {
     "id": "SQLI-009",
     "name": "SQLi SQLMap Marker",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Attempt",
     "pattern": "__[A-Z0-9]+__",
-    "severity": "medium",
-    "description": "Mendeteksi marker template SQLMap seperti __TIME__, __FUNC__, __RANDSTR__"
+    "severity": "low",
+    "cvss_vector": null,
+    "cvss_score": null,
+    "description": "Marker template SQLMap seperti __TIME__, __FUNC__, __RANDSTR__: fingerprint scanner (SQLi Attempt, Tabel 3.4)"
   },
   {
     "id": "SQLI-010",
     "name": "SQLi Select From Statement",
     "attack_type": "SQLi",
+    "attack_subtype": "SQLi Error-Based",
     "pattern": "\\bselect\\b.{0,60}?\\bfrom\\b",
     "severity": "medium",
-    "description": "Mendeteksi statement SELECT...FROM pada payload (indikasi SQLi)"
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+    "cvss_score": 5.3,
+    "description": "Statement SELECT...FROM pada payload: indikasi injeksi ekstraksi data (SQLi Error-Based, Tabel 3.4)"
+  },
+  {
+    "id": "SQLI-011",
+    "name": "SQLi Error-Based Function",
+    "attack_type": "SQLi",
+    "attack_subtype": "SQLi Error-Based",
+    "pattern": "(extractvalue\\s*\\(|updatexml\\s*\\(|polygon\\s*\\(|exp\\s*\\(\\s*~|gt_subset\\s*\\()",
+    "severity": "medium",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+    "cvss_score": 5.3,
+    "description": "Fungsi error-based: extractvalue, updatexml, polygon: bocoran info via error message (Tabel 3.4)"
+  },
+  {
+    "id": "SQLI-012",
+    "name": "SQLi Stacked Query (Write)",
+    "attack_type": "SQLi",
+    "attack_subtype": "SQLi Stacked Queries",
+    "pattern": ";\\s*(drop|insert|update|delete|truncate|create|alter|grant)\\b",
+    "severity": "critical",
+    "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "cvss_score": 9.8,
+    "description": "Stacked query write: DROP/INSERT/UPDATE: modifikasi & hapus data, layanan terganggu (Tabel 3.4)"
   }
 ]
