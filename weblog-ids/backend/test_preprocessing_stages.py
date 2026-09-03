@@ -101,22 +101,49 @@ def main() -> None:
         print("-" * 60)
 
     # --- Output c: CSV ---
-    with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(
-            ["payload_id", "raw_payload"]
-            + [f"T{level}_matched_rules" for level in LEVELS]
-            + [f"T{level}_preprocessed" for level in LEVELS]
+    # Coba tulis di sebelah backend; bila tidak writable (mis. dipasang di
+    # /opt milik root lalu dijalankan user biasa), fallback ke direktori
+    # kerja, lalu ke temp.
+    csv_candidates = [
+        CSV_PATH,
+        os.path.join(os.getcwd(), "test_preprocessing_stages.csv"),
+        os.path.join(
+            os.environ.get("TEMP", os.environ.get("TMP", "/tmp")),
+            "test_preprocessing_stages.csv",
+        ),
+    ]
+    csv_written = None
+    for candidate in csv_candidates:
+        try:
+            with open(candidate, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(
+                    ["payload_id", "raw_payload"]
+                    + [f"T{level}_matched_rules" for level in LEVELS]
+                    + [f"T{level}_preprocessed" for level in LEVELS]
+                )
+                for pid, raw in PAYLOADS:
+                    row = [pid, raw]
+                    row += [
+                        ",".join(matrix[(pid, level)]) if matrix[(pid, level)] else "-"
+                        for level in LEVELS
+                    ]
+                    row += [transformed[(pid, level)] for level in LEVELS]
+                    writer.writerow(row)
+            csv_written = candidate
+            break
+        except PermissionError:
+            print(
+                f"[Harness] Tidak punya izin menulis ke {candidate}, "
+                "mencoba lokasi berikutnya..."
+            )
+    if csv_written:
+        print(f"[Harness] Matriks disimpan ke: {csv_written}")
+    else:
+        print(
+            "[Harness] PERINGATAN: CSV tidak tersimpan "
+            "(tidak ada lokasi yang writable). Matriks hanya dicetak ke layar."
         )
-        for pid, raw in PAYLOADS:
-            row = [pid, raw]
-            row += [
-                ",".join(matrix[(pid, level)]) if matrix[(pid, level)] else "-"
-                for level in LEVELS
-            ]
-            row += [transformed[(pid, level)] for level in LEVELS]
-            writer.writerow(row)
-    print(f"[Harness] Matriks disimpan ke: {CSV_PATH}")
 
     # Ringkasan deteksi per level (untuk sanity check cepat)
     print()
