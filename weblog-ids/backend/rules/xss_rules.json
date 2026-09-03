@@ -8,7 +8,7 @@
     "severity": "medium",
     "cvss_vector": "AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
     "cvss_score": 6.1,
-    "description": "Tag <script> via parameter URL (XSS Reflected, Tabel 3.3)"
+    "description": "Tag <script> via parameter URL"
   },
   {
     "id": "XSS-002",
@@ -19,7 +19,7 @@
     "severity": "medium",
     "cvss_vector": "AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:L/A:N",
     "cvss_score": 5.4,
-    "description": "Event handler JavaScript dieksekusi sisi klien (XSS DOM-based, Tabel 3.3)"
+    "description": "Event handler JavaScript dieksekusi sisi klien"
   },
   {
     "id": "XSS-003",
