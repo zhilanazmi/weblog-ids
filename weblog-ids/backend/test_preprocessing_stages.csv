@@ -1,0 +1,14 @@
+payload_id,raw_payload,T1_matched_rules,T2_matched_rules,T3_matched_rules,T4_matched_rules,T1_preprocessed,T2_preprocessed,T3_preprocessed,T4_preprocessed
+P01,%3Cscript%3Ealert(1)%3C%2Fscript%3E,"XSS-001,XSS-004","XSS-001,XSS-004","XSS-001,XSS-004","XSS-001,XSS-004",<script>alert(1)</script>,<script>alert(1)</script>,<script>alert(1)</script>,<script>alert(1)</script>
+P02,%3C%73%63%72%69%70%74%3Ealert(1)%3C%2F%73%63%72%69%70%74%3E,"XSS-001,XSS-004","XSS-001,XSS-004","XSS-001,XSS-004","XSS-001,XSS-004",<script>alert(1)</script>,<script>alert(1)</script>,<script>alert(1)</script>,<script>alert(1)</script>
+P03,%253Cscript%253Ealert(1)%253C%252Fscript%253E,XSS-004,"XSS-001,XSS-004","XSS-001,XSS-004","XSS-001,XSS-004",%3Cscript%3Ealert(1)%3C%2Fscript%3E,<script>alert(1)</script>,<script>alert(1)</script>,<script>alert(1)</script>
+P04,<ScRiPt >alert(1)</ScRiPt>,"XSS-001,XSS-004","XSS-001,XSS-004","XSS-001,XSS-004","XSS-001,XSS-004",<ScRiPt >alert(1)</ScRiPt>,<ScRiPt >alert(1)</ScRiPt>,<script >alert(1)</script>,<script >alert(1)</script>
+P05,%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E,"XSS-002,XSS-004","XSS-002,XSS-004","XSS-002,XSS-004","XSS-002,XSS-004",<img src=x onerror=alert(1)>,<img src=x onerror=alert(1)>,<img src=x onerror=alert(1)>,<img src=x onerror=alert(1)>
+P06,1%27%20OR%20%271%27%3D%271,SQLI-002,SQLI-002,SQLI-002,SQLI-002,1' OR '1'='1,1' OR '1'='1,1' or '1'='1,1' or '1'='1
+P07,1%2527%2520OR%2520%25271%2527%253D%25271,-,SQLI-002,SQLI-002,SQLI-002,1%27%20OR%20%271%27%3D%271,1' OR '1'='1,1' or '1'='1,1' or '1'='1
+P08,1%252527%252520OR%252520%252571%252527%25253D%252571,-,-,-,-,1%2527%2520OR%2520%2571%2527%253D%2571,1' OR q'=q,1' or q'=q,1' or q'=q
+P09,1%20UNION%20SELECT%20null%2Cnull%2Cnull,SQLI-001,SQLI-001,SQLI-001,SQLI-001,"1 UNION SELECT null,null,null","1 UNION SELECT null,null,null","1 union select null,null,null","1 union select null,null,null"
+P10,1%20%55%4E%49%4F%4E%20%53%45%4C%45%43%54,SQLI-001,SQLI-001,SQLI-001,SQLI-001,1 UNION SELECT,1 UNION SELECT,1 union select,1 union select
+P11,1' OR '1'='1,SQLI-002,SQLI-002,SQLI-002,SQLI-002,1' OR '1'='1,1' OR '1'='1,1' or '1'='1,1' or '1'='1
+P12,1%20UNION%20%20SELECT%20null,SQLI-001,SQLI-001,SQLI-001,SQLI-001,1 UNION  SELECT null,1 UNION  SELECT null,1 union  select null,1 union select null
+P13,1%27%09OR%09%271%27%3D%271,SQLI-002,SQLI-002,SQLI-002,SQLI-002,1'	OR	'1'='1,1'	OR	'1'='1,1'	or	'1'='1,1' or '1'='1

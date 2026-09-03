@@ -1,7 +1,8 @@
 """
 preprocessor.py - Decoding & normalisasi request sebelum rule matching.
 
-Tahapan (PRD 1.5.5):
+Tahapan (PRD 1.5.5), bisa dikendalikan per level lewat PREPROCESS_LEVEL
+(config.py / env var, default 4 = pipeline penuh):
 1. recursive_decode: URL-decode berulang (max 3x) untuk menangani
    double/triple encoding, mis. %253Cscript%253E -> %3Cscript%3E -> <script>.
 2. normalize: lowercase + rapikan whitespace agar rule matching konsisten.
@@ -61,20 +62,66 @@ def normalize(value: str) -> str:
     return collapsed.strip()
 
 
-def build_payload(parsed: Dict[str, Any]) -> Dict[str, str]:
+def preprocess_payload(value: str, level: Optional[int] = None) -> str:
+    """
+    Jalankan pipeline preprocessing sesuai level tahapan (1-4).
+
+    Level dikendalikan parameter `level` atau config.PREPROCESS_LEVEL
+    (env PREPROCESS_LEVEL, default 4 = pipeline penuh):
+        1: URL-decode SATU kali (unquote_plus sekali).
+        2: level 1 + recursive decode hingga total maks. MAX_DECODE_ROUND
+           kali (berhenti lebih awal bila string sudah tidak berubah).
+        3: level 2 + lowercasing seluruh string.
+        4: level 3 + trim whitespace ujung + normalisasi whitespace
+           (tab/newline/spasi ganda) menjadi spasi tunggal.
+
+    Dipakai harness pengujian bertahap; build_payload memakai fungsi ini
+    dengan level dari konfigurasi sehingga perilaku produksi (level 4)
+    tetap identik dengan pipeline lama.
+    """
+    if value is None:
+        return ""
+
+    resolved = config.PREPROCESS_LEVEL if level is None else level
+    resolved = max(1, min(4, int(resolved)))
+
+    current = value
+    if resolved == 1:
+        current = unquote_plus(current)
+    else:
+        # Level >= 2: recursive decode (sudah mencakup decode pertama,
+        # total maks. MAX_DECODE_ROUND kali, berhenti bila stabil).
+        current = recursive_decode(current)
+    if resolved >= 3:
+        current = current.lower()
+    if resolved >= 4:
+        current = re.sub(r"\s+", " ", current).strip()
+    return current
+
+
+def build_payload(
+    parsed: Dict[str, Any], level: Optional[int] = None
+) -> Dict[str, str]:
     """
     Bangun payload inspeksi dari hasil parsing log.
 
     Fokus inspeksi adalah request_uri (path + query string + nilai parameter),
     karena payload XSS/SQLi umumnya muncul di sana (PRD 1.5.4).
 
+    Parameter `level` (opsional, default None -> config.PREPROCESS_LEVEL)
+    mengendalikan kedalaman pipeline preprocessing; default mempertahankan
+    perilaku produksi (level 4).
+
     Mengembalikan dict:
-        - decoded_payload    : request_uri setelah recursive decode
-        - normalized_payload : decoded_payload setelah normalisasi
+        - decoded_payload    : request_uri setelah tahap decode saja
+        - normalized_payload : hasil preprocessing penuh pada level aktif
     """
     request_uri = (parsed or {}).get("request_uri") or ""
-    decoded = recursive_decode(request_uri)
-    normalized = normalize(decoded)
+    resolved = config.PREPROCESS_LEVEL if level is None else level
+    resolved = max(1, min(4, int(resolved)))
+
+    decoded = preprocess_payload(request_uri, min(resolved, 2))
+    normalized = preprocess_payload(request_uri, resolved)
     return {
         "decoded_payload": decoded,
         "normalized_payload": normalized,
@@ -91,9 +138,9 @@ if __name__ == "__main__":
         "/sqli/?id=1%27%20or%201%3D1--&Submit=Submit",
         "/login.php",
     ]
+    print(f"[Preprocessor] PREPROCESS_LEVEL aktif: {config.PREPROCESS_LEVEL}")
     for t in tests:
-        decoded = recursive_decode(t)
         print("RAW    :", t)
-        print("DECODED:", decoded)
-        print("NORM   :", normalize(decoded))
+        for lv in (1, 2, 3, 4):
+            print(f"L{lv}     :", repr(preprocess_payload(t, lv)))
         print("-" * 60)

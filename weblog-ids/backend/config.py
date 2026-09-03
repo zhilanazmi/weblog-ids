@@ -44,6 +44,17 @@ POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "0.5"))
 # Batas maksimal recursive URL decoding untuk menangani double/triple encoding.
 MAX_DECODE_ROUND = int(os.getenv("MAX_DECODE_ROUND", "3"))
 
+# Level pipeline preprocessing (1-4), dipakai untuk eksperimen kontribusi
+# tiap tahap (skripsi). Default 4 = pipeline penuh agar perilaku produksi
+# tidak berubah:
+#   1: URL-decode satu kali
+#   2: + recursive decode (total maks. MAX_DECODE_ROUND kali)
+#   3: + lowercase
+#   4: + trim & normalisasi whitespace menjadi spasi tunggal
+# Nilai di luar rentang 1-4 di-clamp ke batas terdekat.
+_raw_level = int(os.getenv("PREPROCESS_LEVEL", "4"))
+PREPROCESS_LEVEL = max(1, min(4, _raw_level))
+
 # ---------------------------------------------------------------------------
 # Database (MySQL)
 # ---------------------------------------------------------------------------
