@@ -19,11 +19,13 @@ if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
 import database
+from services.time_utils import format_local_datetime_ms
 
 # Kolom CSV sesuai permintaan. Didefinisikan sekali agar header dan urutan
 # penulisan baris konsisten.
 CSV_COLUMNS = [
     "timestamp",
+    "log_time",
     "ip",
     "method",
     "request_uri",
@@ -32,6 +34,7 @@ CSV_COLUMNS = [
     "severity",
     "matched_rules",
     "latency_ms",
+    "delta_ms",
     "recommendation",
 ]
 
@@ -76,9 +79,9 @@ def build_detections_csv(filters: Optional[Dict[str, Any]] = None) -> str:
     label = filters.get("label")
 
     base = """
-        SELECT a.timestamp, a.ip, a.method, a.request_uri,
+        SELECT a.timestamp, a.log_time, a.ip, a.method, a.request_uri,
                d.decoded_payload, d.label, d.severity, d.matched_rules,
-               d.latency_ms, d.recommendation
+               d.latency_ms, d.delta_ms, d.recommendation
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
     """
@@ -106,6 +109,7 @@ def build_detections_csv(filters: Optional[Dict[str, Any]] = None) -> str:
         writer.writerow(
             [
                 r.get("timestamp", ""),
+                format_local_datetime_ms(r.get("log_time")),
                 r.get("ip", ""),
                 r.get("method", ""),
                 r.get("request_uri", ""),
@@ -114,6 +118,7 @@ def build_detections_csv(filters: Optional[Dict[str, Any]] = None) -> str:
                 r.get("severity", ""),
                 _format_matched_rules(r.get("matched_rules")),
                 r.get("latency_ms") if r.get("latency_ms") is not None else "",
+                r.get("delta_ms") if r.get("delta_ms") is not None else "",
                 r.get("recommendation", ""),
             ]
         )

@@ -25,6 +25,8 @@ if _BACKEND_DIR not in sys.path:
 
 import config
 
+from services.time_utils import parse_timestamp_ms, epoch_ms_to_local_datetime
+
 
 # ---------------------------------------------------------------------------
 # Definisi tabel (dipakai init_db). CREATE TABLE IF NOT EXISTS agar idempotent:
@@ -35,6 +37,10 @@ CREATE TABLE IF NOT EXISTS access_logs (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     ip              VARCHAR(45),
     timestamp       VARCHAR(64),
+    -- Waktu request presisi ms (dari msec=$msec, fallback parse $time_local),
+    -- dinormalisasi ke zona waktu mesin backend (naive) supaya bisa
+    -- dibandingkan langsung dengan created_at untuk hitung delta alert.
+    log_time        DATETIME(3) NULL DEFAULT NULL,
     method          VARCHAR(10),
     request_uri     TEXT,
     protocol        VARCHAR(20),
@@ -59,6 +65,9 @@ CREATE TABLE IF NOT EXISTS detection_results (
     matched_rules      TEXT,
     recommendation     TEXT,
     latency_ms         DOUBLE NULL DEFAULT NULL,
+    -- Selisih waktu request (access_logs.log_time) -> alert dibuat
+    -- (created_at), dalam milidetik. Bukti delay end-to-end realtime.
+    delta_ms           DOUBLE NULL DEFAULT NULL,
     actual_label       VARCHAR(20) NULL DEFAULT NULL,
     labeled_at         DATETIME NULL DEFAULT NULL,
     labeled_by         VARCHAR(100) NULL DEFAULT NULL,
@@ -136,6 +145,11 @@ _DETECTION_RESULT_COLUMNS = {
     "labeled_by": "ALTER TABLE detection_results ADD COLUMN labeled_by VARCHAR(100) NULL DEFAULT NULL",
     "ground_truth_id": "ALTER TABLE detection_results ADD COLUMN ground_truth_id INT NULL DEFAULT NULL",
     "latency_ms": "ALTER TABLE detection_results ADD COLUMN latency_ms DOUBLE NULL DEFAULT NULL",
+    "delta_ms": "ALTER TABLE detection_results ADD COLUMN delta_ms DOUBLE NULL DEFAULT NULL",
+}
+
+_ACCESS_LOG_COLUMNS = {
+    "log_time": "ALTER TABLE access_logs ADD COLUMN log_time DATETIME(3) NULL DEFAULT NULL",
 }
 
 _EVALUATION_RUN_COLUMNS = {
@@ -207,7 +221,10 @@ def init_db() -> None:
                 cur.execute(ddl)
             _ensure_detection_label_columns(cur)
             _ensure_evaluation_run_columns(cur)
+            _ensure_access_log_columns(cur)
             _ensure_datetime_ms_precision(cur)
+            _backfill_log_time(cur)
+            _backfill_delta_ms(cur)
     finally:
         conn.close()
 
@@ -250,6 +267,63 @@ def _ensure_evaluation_run_columns(cur) -> None:
             cur.execute(ddl)
 
 
+def _ensure_access_log_columns(cur) -> None:
+    """Migrasi ringan: tambah kolom log_time pada access_logs lama."""
+    cur.execute(
+        """
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'access_logs'
+        """,
+        (config.DB_NAME,),
+    )
+    existing = {row["COLUMN_NAME"] for row in cur.fetchall()}
+    for column, ddl in _ACCESS_LOG_COLUMNS.items():
+        if column not in existing:
+            cur.execute(ddl)
+
+
+def _backfill_log_time(cur) -> None:
+    """
+    Isi log_time untuk baris lama yang masih NULL: parse kolom timestamp
+    (format $time_local, mis. "08/Jep/2026:01:51:35 +0800") lalu simpan
+    sebagai datetime lokal presisi ms. Idempotent: hanya baris NULL yang
+    disentuh, jadi aman dipanggil setiap startup.
+    """
+    cur.execute("SELECT id, timestamp FROM access_logs WHERE log_time IS NULL")
+    rows = cur.fetchall()
+    updated = 0
+    for row in rows:
+        epoch_ms = parse_timestamp_ms(row.get("timestamp"))
+        if epoch_ms is None:
+            continue  # timestamp tidak bisa diparse; biarkan NULL (delta "-")
+        cur.execute(
+            "UPDATE access_logs SET log_time = %s WHERE id = %s",
+            (epoch_ms_to_local_datetime(epoch_ms), row["id"]),
+        )
+        updated += 1
+    if updated:
+        print(f"[Database] Backfill log_time: {updated} baris diperbarui.")
+
+
+def _backfill_delta_ms(cur) -> None:
+    """
+    Isi delta_ms untuk baris lama yang masih NULL: selisih created_at -
+    log_time dihitung langsung oleh MySQL (keduanya DATETIME(3) di zona
+    waktu server). Idempotent: hanya baris NULL yang disentuh.
+    """
+    cur.execute(
+        """
+        UPDATE detection_results d
+        JOIN access_logs a ON a.id = d.log_id
+        SET d.delta_ms = TIMESTAMPDIFF(MICROSECOND, a.log_time, d.created_at) / 1000.0
+        WHERE d.delta_ms IS NULL AND a.log_time IS NOT NULL
+        """
+    )
+    if cur.rowcount:
+        print(f"[Database] Backfill delta_ms: {cur.rowcount} baris diperbarui.")
+
+
 def _ensure_datetime_ms_precision(cur) -> None:
     """
     Migrasi ringan untuk database lama: ubah created_at dari DATETIME
@@ -283,15 +357,19 @@ def save_access_log(parsed_log: Dict[str, Any]) -> int:
     Memakai placeholder %s (parameterized) agar nilai dari log -- yang bisa
     berisi payload berbahaya -- tidak pernah diinterpretasikan sebagai SQL.
     """
+    # log_time: datetime lokal presisi ms (dari timestamp_ms / msec=$msec).
+    # Disiapkan pipeline; bila tidak ada, kolom dibiarkan NULL.
+    log_time = parsed_log.get("log_time")
     sql = """
         INSERT INTO access_logs
-            (ip, timestamp, method, request_uri, protocol, status_code,
-             body_bytes_sent, referrer, user_agent, raw_log)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (ip, timestamp, log_time, method, request_uri, protocol,
+             status_code, body_bytes_sent, referrer, user_agent, raw_log)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     params = (
         parsed_log.get("ip"),
         parsed_log.get("timestamp"),
+        log_time,
         parsed_log.get("method"),
         parsed_log.get("request_uri"),
         parsed_log.get("protocol"),
@@ -355,23 +433,46 @@ def save_detection_result(log_id: int, hasil_deteksi: Dict[str, Any]) -> int:
         conn.close()
 
 
-def update_detection_latency(detection_id: int, latency_ms: float) -> None:
+def update_detection_latency(
+    detection_id: int, latency_ms: float, delta_ms: Optional[float] = None
+) -> None:
     """
-    Perbarui kolom latency_ms pada satu baris detection_results.
+    Perbarui kolom latency_ms (dan delta_ms bila ada) pada satu baris
+    detection_results.
 
     Dipanggil pipeline setelah seluruh tahap deteksi (parse -> preprocess ->
     rule match -> klasifikasi -> INSERT) selesai, karena nilai latency total
     baru diketahui setelah kedua INSERT (access_log & detection_results)
-    dijalankan.
+    dijalankan. delta_ms = created_at - waktu request log (bukti realtime).
     """
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE detection_results SET latency_ms = %s WHERE id = %s",
-                (latency_ms, detection_id),
+                "UPDATE detection_results SET latency_ms = %s, delta_ms = %s "
+                "WHERE id = %s",
+                (latency_ms, delta_ms, detection_id),
             )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def get_detection_created_at(detection_id: int) -> Optional[Any]:
+    """
+    Ambil created_at (DATETIME(3)) satu hasil deteksi. Dipakai pipeline untuk
+    menghitung delta_ms dan waktu alert yang dikirim ke dashboard, agar sama
+    persis dengan nilai yang tersimpan di database.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT created_at FROM detection_results WHERE id = %s",
+                (detection_id,),
+            )
+            row = cur.fetchone()
+            return row["created_at"] if row else None
     finally:
         conn.close()
 

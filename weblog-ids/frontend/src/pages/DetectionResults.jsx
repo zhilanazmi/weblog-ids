@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchDetections, exportCsvUrl } from "../api/api.js";
+import { formatDateTimeMs, formatDelta } from "../utils/time";
 
 // DetectionResults.jsx - Tabel semua hasil deteksi + filter label + paginasi.
 
@@ -16,17 +17,6 @@ function formatRules(matched) {
   } catch {
     return String(matched);
   }
-}
-
-// created_at (waktu alert) datang sebagai ISO dari backend; tampilkan
-// jam:menit:detik.milidetik agar presisi ms terlihat (dipakai sebagai bukti
-// deteksi realtime). Kolom "Waktu" tetap menampilkan timestamp log mentah
-// (presisi detik, sesuai format access log Nginx).
-function formatAlertTime(iso) {
-  if (!iso) return "-";
-  const m = String(iso).match(/T(\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?/);
-  if (!m) return String(iso);
-  return m[2] ? `${m[1]}.${m[2].padEnd(3, "0")}` : m[1];
 }
 
 export default function DetectionResults() {
@@ -125,8 +115,9 @@ export default function DetectionResults() {
           <table>
             <thead>
               <tr>
-                <th>Waktu</th>
+                <th>Waktu Log</th>
                 <th>Waktu Alert</th>
+                <th>Delta</th>
                 <th>IP</th>
                 <th>Method</th>
                 <th>Request URI</th>
@@ -142,8 +133,13 @@ export default function DetectionResults() {
               {rows.map((r) => (
                 // class sev-* memberi warna baris sesuai severity.
                 <tr key={r.id} className={`sev-${r.severity}`}>
-                  <td>{r.timestamp}</td>
-                  <td>{formatAlertTime(r.created_at)}</td>
+                  {/* log_time & created_at: waktu request (dari log Nginx,
+                      presisi ms via msec=$msec) vs waktu alert dibuat di DB.
+                      Format keduanya sama: "YYYY-MM-DD HH:MM:SS.mmm". */}
+                  <td className="nowrap">{formatDateTimeMs(r.log_time ?? r.timestamp)}</td>
+                  <td className="nowrap">{formatDateTimeMs(r.created_at)}</td>
+                  {/* delta_ms: selisih waktu request -> alert (bukti realtime). */}
+                  <td className="nowrap">{formatDelta(r.delta_ms)}</td>
                   <td>{r.ip}</td>
                   <td>{r.method}</td>
                   <td className="wrap">{r.request_uri}</td>

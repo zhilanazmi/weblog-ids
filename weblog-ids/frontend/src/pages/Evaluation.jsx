@@ -11,6 +11,7 @@ import {
   runGenerator,
   fetchGeneratorStatus,
 } from "../api/api.js";
+import { formatDateTimeMs } from "../utils/time";
 
 // Evaluation.jsx - Halaman Evaluasi WebLog-IDS.
 // Bagian A: Generator serangan (kirim payload + catat ground truth).
@@ -325,7 +326,7 @@ export default function Evaluation() {
                 {rows.length === 0 && (<tr><td colSpan="10">Tidak ada data.</td></tr>)}
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.timestamp}</td>
+                    <td className="nowrap">{formatDateTimeMs(r.log_time ?? r.timestamp)}</td>
                     <td>{r.ip}</td>
                     <td>{r.method}</td>
                     <td className="wrap">{r.request_uri}</td>

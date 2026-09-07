@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS access_logs (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     ip              VARCHAR(45),          -- VARCHAR(45) agar muat IPv6
     timestamp       VARCHAR(64),          -- time_local mentah dari log
+    log_time        DATETIME(3) NULL DEFAULT NULL,  -- waktu request presisi ms
+                                         -- (dari msec=$msec, zona waktu server)
     method          VARCHAR(10),
     request_uri     TEXT,                 -- TEXT karena URI bisa panjang
     protocol        VARCHAR(20),
@@ -47,6 +49,7 @@ CREATE TABLE IF NOT EXISTS detection_results (
     matched_rules      TEXT,
     recommendation     TEXT,
     latency_ms         DOUBLE NULL DEFAULT NULL,  -- waktu proses deteksi (ms)
+    delta_ms           DOUBLE NULL DEFAULT NULL,  -- created_at - log_time (ms)
     actual_label       VARCHAR(20) NULL DEFAULT NULL,
     labeled_at         DATETIME NULL DEFAULT NULL,
     labeled_by         VARCHAR(100) NULL DEFAULT NULL,

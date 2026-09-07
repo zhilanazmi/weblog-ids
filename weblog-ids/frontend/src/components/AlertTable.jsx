@@ -1,6 +1,8 @@
 // AlertTable.jsx - Tabel ringkas alert/deteksi terbaru.
 // rows: array hasil deteksi (mis. dari GET /api/detections/latest).
 
+import { formatDateTimeMs, formatDelta } from "../utils/time";
+
 // matched_rules disimpan di DB sebagai TEXT JSON (mis. '["XSS-001"]').
 // Helper ini mengubahnya menjadi string rapi untuk ditampilkan.
 function formatRules(matched) {
@@ -23,7 +25,9 @@ export default function AlertTable({ rows }) {
     <table>
       <thead>
         <tr>
-          <th>Waktu</th>
+          <th>Waktu Log</th>
+          <th>Waktu Alert</th>
+          <th>Delta</th>
           <th>IP</th>
           <th>Method</th>
           <th>Request URI</th>
@@ -36,7 +40,13 @@ export default function AlertTable({ rows }) {
       <tbody>
         {rows.map((r) => (
           <tr key={r.id} className={`sev-${r.severity}`}>
-            <td>{r.timestamp}</td>
+            {/* log_time: waktu request dari log Nginx, presisi ms
+                (dari msec=$msec); fallback timestamp mentah data lama. */}
+            <td className="nowrap">{formatDateTimeMs(r.log_time ?? r.timestamp)}</td>
+            {/* created_at: waktu alert dibuat di DB (DATETIME(3), ms). */}
+            <td className="nowrap">{formatDateTimeMs(r.created_at)}</td>
+            {/* delta_ms: selisih waktu request -> alert (bukti realtime). */}
+            <td className="nowrap">{formatDelta(r.delta_ms)}</td>
             <td>{r.ip}</td>
             <td>{r.method}</td>
             <td className="wrap">{r.request_uri}</td>

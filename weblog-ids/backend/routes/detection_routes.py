@@ -51,9 +51,9 @@ def get_logs(
         LIMIT %s OFFSET %s
     """
     sql = """
-        SELECT a.id, a.ip, a.timestamp, a.method, a.request_uri, a.protocol,
-               a.status_code, a.body_bytes_sent, a.referrer, a.user_agent,
-               a.created_at,
+        SELECT a.id, a.ip, a.timestamp, a.log_time, a.method, a.request_uri,
+               a.protocol, a.status_code, a.body_bytes_sent, a.referrer,
+               a.user_agent, a.created_at,
                 d.label, d.severity, d.matched_rules, d.actual_label,
                 d.labeled_at, d.labeled_by
         FROM access_logs a
@@ -85,10 +85,10 @@ def get_detections(
     parameter %s (bukan disisipkan ke string), supaya aman dari injeksi.
 
     SQL (tanpa filter):
-        SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
+        SELECT d.id, a.timestamp, a.log_time, a.ip, a.method, a.request_uri,
                 d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                 d.labeled_by, d.severity, d.matched_rules,
-                d.recommendation, d.created_at
+                d.recommendation, d.latency_ms, d.delta_ms, d.created_at
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
         [WHERE d.label = %s]
@@ -96,10 +96,10 @@ def get_detections(
         LIMIT %s OFFSET %s
     """
     base = """
-        SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
+        SELECT d.id, a.timestamp, a.log_time, a.ip, a.method, a.request_uri,
                d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                d.labeled_by, d.severity, d.matched_rules,
-               d.recommendation, d.latency_ms, d.created_at
+               d.recommendation, d.latency_ms, d.delta_ms, d.created_at
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
     """
@@ -137,10 +137,10 @@ def get_latest_detections(
     parameterized walau jumlah label dinamis.
 
     SQL:
-        SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
+        SELECT d.id, a.timestamp, a.log_time, a.ip, a.method, a.request_uri,
                 d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                 d.labeled_by, d.severity, d.matched_rules,
-                d.recommendation, d.created_at
+                d.recommendation, d.latency_ms, d.delta_ms, d.created_at
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
         WHERE d.label IN (%s, %s, %s)
@@ -149,10 +149,10 @@ def get_latest_detections(
     """
     placeholders = ", ".join(["%s"] * len(_ATTACK_LABELS))
     sql = f"""
-        SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
+        SELECT d.id, a.timestamp, a.log_time, a.ip, a.method, a.request_uri,
                d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                d.labeled_by, d.severity, d.matched_rules,
-               d.recommendation, d.latency_ms, d.created_at
+               d.recommendation, d.latency_ms, d.delta_ms, d.created_at
         FROM detection_results d
         JOIN access_logs a ON a.id = d.log_id
         WHERE d.label IN ({placeholders})
@@ -200,10 +200,10 @@ def set_actual_label(
                 raise HTTPException(status_code=404, detail="Detection tidak ditemukan")
             cur.execute(
                 """
-                SELECT d.id, a.timestamp, a.ip, a.method, a.request_uri,
+                SELECT d.id, a.timestamp, a.log_time, a.ip, a.method, a.request_uri,
                        d.decoded_payload, d.label, d.actual_label, d.labeled_at,
                        d.labeled_by, d.severity, d.matched_rules,
-                       d.recommendation, d.latency_ms, d.created_at
+                       d.recommendation, d.latency_ms, d.delta_ms, d.created_at
                 FROM detection_results d
                 JOIN access_logs a ON a.id = d.log_id
                 WHERE d.id = %s

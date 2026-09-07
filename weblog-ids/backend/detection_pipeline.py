@@ -28,6 +28,11 @@ from services.alert_service import manager
 from services.nginx_parser import parse_log_line
 from services.preprocessor import build_payload
 from services.rule_engine import load_rules, match_rules
+from services.time_utils import (
+    epoch_ms_to_local_datetime,
+    format_epoch_ms_local,
+    format_local_datetime_ms,
+)
 from services.classifier import (
     classify,
     determine_severity,
@@ -63,6 +68,13 @@ class DetectionPipeline:
         parsed = parse_log_line(line)
         if parsed is None:
             return None
+
+        # 1b. Siapkan log_time: datetime lokal presisi ms dari timestamp_ms
+        # (sumber utama msec=$msec; fallback bracket $time_local). Disimpan di
+        # access_logs dan jadi titik nol perhitungan delta request -> alert.
+        timestamp_ms = parsed.get("timestamp_ms")
+        if timestamp_ms is not None:
+            parsed["log_time"] = epoch_ms_to_local_datetime(timestamp_ms)
 
         # 2. Preprocess: decode + normalisasi request_uri jadi payload.
         payload = build_payload(parsed)
@@ -100,13 +112,35 @@ class DetectionPipeline:
         # Latency total pipeline: parse -> preprocess -> rule match ->
         # klasifikasi -> simpan DB. Disimpan setelah INSERT karena nilai
         # lengkapnya baru diketahui setelah kedua insert selesai.
+        #
+        # delta_ms = created_at (waktu alert di DB) - log_time (waktu request
+        # di log Nginx), keduanya presisi ms. Ini bukti delay end-to-end
+        # realtime: request tercatat Nginx -> alert muncul di dashboard.
+        # created_at diambil balik dari DB supaya sama persis dengan nilai
+        # yang ditampilkan dashboard.
         latency_ms = round((time.perf_counter() - started) * 1000, 3)
-        database.update_detection_latency(detection_id, latency_ms)
+        created_at = database.get_detection_created_at(detection_id)
+        delta_ms = None
+        if created_at is not None and parsed.get("log_time") is not None:
+            delta_ms = round(
+                (created_at - parsed["log_time"]).total_seconds() * 1000, 3
+            )
+        database.update_detection_latency(detection_id, latency_ms, delta_ms)
 
         # 9. Jika ini serangan (bukan Normal), kirim alert realtime ke WebSocket.
         if label in _ATTACK_LABELS:
             alert_payload = {
                 "timestamp": parsed.get("timestamp"),
+                # log_timestamp / alert_time: waktu request vs waktu alert,
+                # keduanya "YYYY-MM-DD HH:MM:SS.mmm" agar format konsisten.
+                "log_timestamp": (
+                    format_epoch_ms_local(timestamp_ms)
+                    if timestamp_ms is not None
+                    else parsed.get("timestamp")
+                ),
+                "alert_time": format_local_datetime_ms(created_at),
+                # delta_ms: selisih waktu request -> alert (bukti realtime).
+                "delta_ms": delta_ms,
                 "ip": parsed.get("ip"),
                 "method": parsed.get("method"),
                 "request_uri": parsed.get("request_uri"),
@@ -117,9 +151,14 @@ class DetectionPipeline:
                 "recommendation": recommendation,
                 # latency_ms: waktu proses deteksi di sisi server (ms).
                 "latency_ms": latency_ms,
-                # detected_at: epoch ms saat deteksi selesai, dipakai frontend
-                # untuk menghitung latency pengiriman alert sampai ke browser.
-                "detected_at": int(time.time() * 1000),
+                # detected_at: epoch ms saat alert dibuat (created_at),
+                # dipakai frontend untuk menghitung latency pengiriman alert
+                # sampai ke browser.
+                "detected_at": (
+                    int(created_at.timestamp() * 1000)
+                    if created_at is not None
+                    else int(time.time() * 1000)
+                ),
             }
             self._broadcast_alert(alert_payload)
 
@@ -132,6 +171,7 @@ class DetectionPipeline:
             "severity": severity,
             "matched_rules": [m["id"] for m in matched],
             "latency_ms": latency_ms,
+            "delta_ms": delta_ms,
         }
 
     def _broadcast_alert(self, alert_payload: Dict[str, Any]) -> None:
@@ -170,9 +210,12 @@ if __name__ == "__main__":
     pipeline = DetectionPipeline()
 
     sample_lines = [
+        # Format lama (tanpa msec) -- delta tetap terhitung dari $time_local.
         '45.1.1.1 - - [14/Jun/2026:12:00:00 +0800] "GET /dvwa/vulnerabilities/xss_r/?name=%3Cscript%3Ealert(1)%3C%2Fscript%3E HTTP/1.1" 200 100 "-" "ua"',
         '45.2.2.2 - - [14/Jun/2026:12:00:01 +0800] "GET /dvwa/vulnerabilities/sqli/?id=1%27%20or%201%3D1--&Submit=Submit HTTP/1.1" 200 120 "-" "ua"',
         '45.5.5.5 - - [14/Jun/2026:12:00:04 +0800] "GET /login.php HTTP/1.1" 200 644 "-" "Mozilla/5.0"',
+        # Format baru server DVWA: msec=$msec presisi milidetik.
+        '182.10.99.158 - - [08/Sep/2026:01:51:35 +0800] "GET /vulnerabilities/xss_r/?name=%3Cscript%3Ealert%28%22xss%21%22%29%3C%2Fscript%3E HTTP/1.1" 200 1590 "https://dvwa.zhillanazmi.id/vulnerabilities/xss_r/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36" msec=1788803495.969 rt=0.006 time_ms=2026-09-08T01:51:35.969',
     ]
     for line in sample_lines:
         result = pipeline.process_line(line)

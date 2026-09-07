@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { WS_URL } from "../api/api.js";
+import { formatDateTimeMs, formatDelta } from "../utils/time";
 
 // RealtimeAlerts.jsx - Menerima alert serangan secara realtime via WebSocket.
 //
@@ -106,8 +107,20 @@ export default function RealtimeAlerts() {
             <span className={`badge ${a.severity}`}>{a.severity}</span>
           </div>
           <div className="row">
-            <span className="key">Waktu:</span>
-            {a.timestamp}
+            <span className="key">Waktu Log:</span>
+            {/* log_timestamp: waktu request dari log Nginx, presisi ms
+                (dari msec=$msec); format sama dengan waktu alert. */}
+            {formatDateTimeMs(a.log_timestamp ?? a.timestamp)}
+          </div>
+          <div className="row">
+            <span className="key">Waktu Alert:</span>
+            {/* alert_time: waktu alert dibuat di DB (created_at, ms). */}
+            {formatDateTimeMs(a.alert_time)}
+          </div>
+          <div className="row">
+            <span className="key">Delta (Log→Alert):</span>
+            {/* delta_ms: selisih waktu request -> alert (bukti realtime). */}
+            {formatDelta(a.delta_ms)}
           </div>
           <div className="row">
             <span className="key">IP:</span>
