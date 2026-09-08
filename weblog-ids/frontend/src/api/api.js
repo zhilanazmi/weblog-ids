@@ -99,3 +99,13 @@ export const exportCsvUrl = (label = "") => {
   const qs = params.toString();
   return `${BASE_URL}/api/reports/export-csv${qs ? `?${qs}` : ""}`;
 };
+
+// URL export dataset access_logs mentah (log DVWA) dengan filter label
+// opsional. Sama seperti exportCsvUrl: URL dipakai untuk memicu unduhan
+// langsung di browser (backend mengirim Content-Disposition: attachment).
+export const exportAccessLogCsvUrl = (label = "") => {
+  const params = new URLSearchParams();
+  if (label) params.append("label", label);
+  const qs = params.toString();
+  return `${BASE_URL}/api/reports/export-access-csv${qs ? `?${qs}` : ""}`;
+};

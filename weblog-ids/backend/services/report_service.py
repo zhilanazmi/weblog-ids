@@ -39,6 +39,26 @@ CSV_COLUMNS = [
 ]
 
 
+# Kolom CSV export dataset access_logs (log mentah DVWA). Label hasil deteksi
+# disertakan via LEFT JOIN agar dataset yang diunduh langsung punya anotasi
+# kelas untuk keperluan analisis/pelatihan data.
+ACCESS_LOG_CSV_COLUMNS = [
+    "id",
+    "timestamp",
+    "log_time",
+    "ip",
+    "method",
+    "request_uri",
+    "protocol",
+    "status_code",
+    "body_bytes_sent",
+    "referrer",
+    "user_agent",
+    "label",
+    "raw_log",
+]
+
+
 def _format_matched_rules(raw: Optional[str]) -> str:
     """
     matched_rules tersimpan sebagai TEXT JSON (mis. '["XSS-001","XSS-004"]').
@@ -120,6 +140,70 @@ def build_detections_csv(filters: Optional[Dict[str, Any]] = None) -> str:
                 r.get("latency_ms") if r.get("latency_ms") is not None else "",
                 r.get("delta_ms") if r.get("delta_ms") is not None else "",
                 r.get("recommendation", ""),
+            ]
+        )
+
+    return buffer.getvalue()
+
+
+def build_access_logs_csv(filters: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Ambil seluruh dataset access_logs (log mentah DVWA) lalu kembalikan isi
+    CSV sebagai string. Label hasil deteksi disertakan via LEFT JOIN sehingga
+    tiap baris log langsung berpasangan dengan kelasnya (Normal/XSS/SQLi/
+    Multiple) -- siap dipakai sebagai dataset untuk analisis.
+
+    filters: dict opsional, mendukung key 'label' (Normal/XSS/SQLi/Multiple).
+    Bila label diberikan, hanya baris access_logs dengan label tersebut yang
+    diekspor. Query parameterized (%s) untuk mencegah SQL injection.
+
+    ORDER BY a.id ASC: dataset diekspor urut kronologis (sesuai urutan baris
+    log asli), bukan terbaru-dulu seperti halaman deteksi.
+    """
+    filters = filters or {}
+    label = filters.get("label")
+
+    base = """
+        SELECT a.id, a.timestamp, a.log_time, a.ip, a.method, a.request_uri,
+               a.protocol, a.status_code, a.body_bytes_sent, a.referrer,
+               a.user_agent, d.label, a.raw_log
+        FROM access_logs a
+        LEFT JOIN detection_results d ON d.log_id = a.id
+    """
+    params = []
+    if label:
+        base += " WHERE d.label = %s"
+        params.append(label)
+    base += " ORDER BY a.id ASC"
+
+    conn = database.get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(base, tuple(params))
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(ACCESS_LOG_CSV_COLUMNS)
+
+    for r in rows:
+        writer.writerow(
+            [
+                r.get("id", ""),
+                r.get("timestamp", ""),
+                format_local_datetime_ms(r.get("log_time")),
+                r.get("ip", ""),
+                r.get("method", ""),
+                r.get("request_uri", ""),
+                r.get("protocol", ""),
+                r.get("status_code") if r.get("status_code") is not None else "",
+                r.get("body_bytes_sent") if r.get("body_bytes_sent") is not None else "",
+                r.get("referrer", ""),
+                r.get("user_agent", ""),
+                r.get("label") or "",
+                r.get("raw_log", ""),
             ]
         )
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchDetections, exportCsvUrl } from "../api/api.js";
+import { fetchDetections, exportCsvUrl, exportAccessLogCsvUrl } from "../api/api.js";
 import { formatDateTimeMs, formatDelta } from "../utils/time";
 
 // DetectionResults.jsx - Tabel semua hasil deteksi + filter label + paginasi.
@@ -66,6 +66,15 @@ export default function DetectionResults() {
     window.open(url, "_blank");
   };
 
+  // Export dataset access_logs mentah (log DVWA): arahkan browser ke endpoint
+  // export-access-csv dengan filter label aktif. File berisi seluruh field log
+  // (raw_log, user_agent, status_code, dll.) + label, siap dipakai sebagai
+  // dataset untuk analisis.
+  const onExportAccessLogCsv = () => {
+    const url = exportAccessLogCsvUrl(label === "Semua" ? "" : label);
+    window.open(url, "_blank");
+  };
+
   const page = Math.floor(offset / PAGE_SIZE) + 1;
 
   return (
@@ -86,6 +95,9 @@ export default function DetectionResults() {
 
         {/* Tombol export: mengirim filter label aktif ke endpoint export-csv. */}
         <button onClick={onExportCsv}>Export CSV</button>
+
+        {/* Tombol export dataset mentah: log access DVwa lengkap + label. */}
+        <button onClick={onExportAccessLogCsv}>Export Access Log CSV</button>
 
         {/* Paginasi sederhana berbasis offset. Tombol Prev nonaktif di halaman 1. */}
         <button
